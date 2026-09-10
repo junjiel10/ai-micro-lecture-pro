@@ -50,9 +50,33 @@
   }
 
   var LOGIN_NOTICE = "演示版免登录，直接体验；正式版将支持账号体系与个人作品库。";
-  var LOGOUT_HINT = "已通过访问口令进入。点击退出后，下次需要重新输入口令。";
+  var LOGOUT_HINT = "已通过访问口令进入。点击退出后，下次创作时需要重新输入口令。";
+  var PASS_HINT = "输入访问口令后即可开始创作";
 
   window.toast = toast;   // 供调试与后续复用
+
+  /* 口令状态缓存。
+     /api/auth 返回 {required, authed} —— 只说明「要不要口令」「当前过没过」，
+     不含口令本身。每次都问会白跑请求，所以缓存住；验证成功后再作废。 */
+  var authPromise = null;
+
+  function fetchAuth() {
+    if (!authPromise) {
+      authPromise = fetch("/api/auth", { cache: "no-store" })
+        .then(function (r) {
+          return r.ok ? r.json() : { required: false, authed: true };
+        })
+        .catch(function () {
+          // 探测失败就当作「不需要口令」，让请求照发 ——
+          // 后端仍会自己校验，真需要的话会返 401，由调用方提示。
+          return { required: false, authed: true };
+        });
+    }
+    return authPromise;
+  }
+
+  window.getAuth = fetchAuth;      // 供 create.js 判断要不要显示「删除」
+  window.ensurePass = ensurePass;  // 需要口令的动作，调用前先 await 它
 
   /* ==================== 2 / 3. 顶栏 ==================== */
   var collapses = [];   // 每个折叠实例：{ box, set }
@@ -88,28 +112,40 @@
   }
 
   function initNav() {
-    /* 「登录 / 注册」按部署环境自动变身：
-         · 本机自用（没设口令）—— 保留占位按钮，点一下说明「免登录」
-         · 公网部署（设了口令）—— 已经是登录状态，按钮改成「退出登录」
-       不然会很难受：页面上写着「登录 / 注册」，点一下却告诉你「免登录」，
+    /* 「登录 / 注册」按部署环境自动变身，三种状态：
+         demo   —— 本机自用没设口令，保持占位按钮，点一下说明「免登录」
+         pass   —— 要口令且还没通过，点一下弹口令框
+         logout —— 已通过口令，点一下退出
+       不区分的话会很难受：页面上写着「登录 / 注册」，点一下却告诉你「免登录」，
        可你刚刚才输过口令。 */
     var login = $("loginBtn");
     if (login) {
-      login.addEventListener("click", function () {
-        if (login.dataset.logout === "1") { window.location.href = "/logout"; return; }
-        toast(LOGIN_NOTICE);
-      });
-      // 先按占位行为渲染，探测到要口令再改（探测失败就保持占位）
-      fetch("/api/health", { cache: "no-store" })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) {
-          if (!d || !d.auth_required) return;
+      var setLoginBtn = function (mode) {
+        login.dataset.mode = mode;
+        if (mode === "logout") {
           login.textContent = "退出登录";
-          login.dataset.logout = "1";
           login.title = LOGOUT_HINT;
           login.setAttribute("aria-label", "退出登录");
-        })
-        .catch(function () { /* 保持占位行为 */ });
+        } else if (mode === "pass") {
+          login.textContent = "输入口令";
+          login.title = PASS_HINT;
+          login.setAttribute("aria-label", "输入访问口令");
+        }
+      };
+
+      login.addEventListener("click", function () {
+        var mode = login.dataset.mode || "demo";
+        if (mode === "logout") { window.location.href = "/logout"; return; }
+        if (mode === "pass") {
+          openPassModal().then(function (ok) { if (ok) setLoginBtn("logout"); });
+          return;
+        }
+        toast(LOGIN_NOTICE);
+      });
+
+      fetchAuth().then(function (a) {
+        if (a.required) setLoginBtn(a.authed ? "logout" : "pass");
+      });
     }
 
     initCollapse(document.querySelector(".nav"), $("navLinks"), $("navToggle"));       // 首页 / 指南页
@@ -157,9 +193,121 @@
     });
   }
 
+  /* ==================== 5. 创作口令弹窗 ==================== */
+  /* 浏览全站不需要口令，只有「开始创作」这类会真烧 CPU 和大模型额度的动作
+     才要。后端在那些接口上强制校验（绕过页面直接打接口照样 401），
+     这里只负责在那一刻把框弹出来。
+     ensurePass() 返回 Promise<boolean>： true = 可以继续，false = 用户取消。 */
+  var passEls = null;
+  var passResolve = null;
+  var passPromise = null;
+
+  function buildPassModal() {
+    if (passEls) return;
+    var mask = document.createElement("div");
+    mask.className = "modal-mask";
+    mask.id = "passModal";
+    mask.innerHTML =
+      '<div class="modal" style="width:min(420px,100%)">' +
+        '<div class="modal-head">' +
+          '<b>开始创作需要口令</b>' +
+          '<span class="fx" data-pass="cancel">✕</span>' +
+        '</div>' +
+        '<p class="modal-tip">浏览全站和播放示例都不用口令。<br>' +
+          '但<b>生成视频会真实占用服务器 CPU 和大模型额度</b>，' +
+          '所以在这一步核一下身份。</p>' +
+        '<div class="field">' +
+          '<label for="passInput">访问口令</label>' +
+          '<input id="passInput" type="password" autocomplete="current-password" ' +
+            'placeholder="请输入口令">' +
+        '</div>' +
+        '<p class="pass-err" id="passErr" role="alert"></p>' +
+        '<div class="modal-foot">' +
+          '<button class="btn ghost" type="button" data-pass="cancel">取消</button>' +
+          '<button class="btn primary" type="button" data-pass="go">确认并开始</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(mask);
+
+    passEls = {
+      mask: mask,
+      input: mask.querySelector("#passInput"),
+      err: mask.querySelector("#passErr"),
+      go: mask.querySelector('[data-pass="go"]')
+    };
+
+    mask.addEventListener("click", function (e) {
+      if (e.target === mask) { settlePass(false); return; }   // 点遮罩空白 = 取消
+      var act = e.target.getAttribute && e.target.getAttribute("data-pass");
+      if (act === "cancel") settlePass(false);
+      else if (act === "go") submitPass();
+    });
+    // Esc 取消：输入框有焦点，keydown 会冒泡到面板上
+    mask.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") settlePass(false);
+    });
+    passEls.input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); submitPass(); }
+    });
+  }
+
+  function settlePass(ok) {
+    var done = passResolve;
+    passResolve = null;
+    passPromise = null;
+    if (passEls) passEls.mask.classList.remove("show");
+    if (done) done(ok);
+  }
+
+  function openPassModal() {
+    buildPassModal();
+    if (passPromise) return passPromise;      // 已经在问了，别重复弹
+    passEls.err.textContent = "";
+    passEls.input.value = "";
+    passEls.mask.classList.add("show");
+    setTimeout(function () { passEls.input.focus(); }, 60);
+    passPromise = new Promise(function (resolve) { passResolve = resolve; });
+    return passPromise;
+  }
+
+  async function submitPass() {
+    var pw = (passEls.input.value || "").trim();
+    if (!pw) { passEls.err.textContent = "请先输入口令。"; return; }
+    passEls.go.disabled = true;
+    passEls.go.textContent = "验证中…";
+    try {
+      var fd = new FormData();
+      fd.append("password", pw);
+      var r = await fetch("/api/auth", { method: "POST", body: fd });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        passEls.err.textContent = d.error || ("验证失败（" + r.status + "）");
+        passEls.input.select();
+        return;
+      }
+      authPromise = null;        // 状态变了，作废缓存
+      settlePass(true);
+    } catch (e) {
+      passEls.err.textContent = "网络错误：" + e.message;
+    } finally {
+      passEls.go.disabled = false;
+      passEls.go.textContent = "确认并开始";
+    }
+  }
+
+  function ensurePass() {
+    return fetchAuth().then(function (a) {
+      if (!a.required || a.authed) return true;
+      return openPassModal();
+    });
+  }
+
   function boot() {
     initNav();
     initModals();
+    // 先建好藏着。它晚于 initModals 建，所以 Esc / 点遮罩由自己的监听接管，
+    // 与 initModals 里那套互不干扰。
+    buildPassModal();
   }
 
   if (document.readyState === "loading") {

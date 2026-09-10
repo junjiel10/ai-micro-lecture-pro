@@ -17,13 +17,13 @@ import hmac
 import html
 import json
 import os
+import re
 import shutil
 import threading
 import time
 import uuid
-from urllib.parse import quote
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, Response, UploadFile
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse)
 from fastapi.staticfiles import StaticFiles
@@ -66,25 +66,29 @@ def web_settings_allowed() -> bool:
 
 
 # ======================================================================
-# 访问口令门禁
+# 访问口令：只守「创作」这个动作
 # ----------------------------------------------------------------------
-# 为什么不直接用 HTTP Basic 认证（让浏览器自己弹原生登录框）就完事：
-# 那个弹窗完全依赖浏览器的实现。VS Code 内置浏览器、各类 App 的 webview、
-# 部分手机浏览器压根不弹，用户只会看到一行 401 的纯文本「需要访问口令」，
-# 页面上没有任何地方能输入 —— 这正是我们实际踩到的坑。
-# 所以这里自己做一套登录页 + Cookie 会话；同时**保留** Basic 认证，
-# curl / 脚本仍可用 -u 账号:口令 直接访问，自动化不受影响。
+# 设计取向：**浏览完全开放，创作才要口令**。
+#   · 首页、使用指南、示例作品、创作台界面 —— 谁都能看，不用口令
+#   · 但「开始创作」会真实吃掉 CPU（逐镜渲染 + 剪辑合成）和大模型额度，
+#     所以口令卡在这一刻 —— 那才是真正值得守的地方。
+#
+# 门禁在服务端强制执行。「前端弹个框问口令」只是体验层，
+# 就算有人绕过页面直接打接口，一样会被 401 挡回去。
+#
+# 为什么不用 HTTP Basic 认证让浏览器弹原生登录框：
+# 那个弹窗完全依赖浏览器的实现。VS Code 内置浏览器、各类 App 的 webview
+# 压根不弹，用户只会看到一行 401 的纯文本，页面上没有任何地方能输入 ——
+# 这正是我们实际踩过的坑。所以自己做一套弹窗 + Cookie 会话。
+# Basic 认证仍然**保留**，curl / 脚本用 -u 账号:口令 不受影响。
 # ======================================================================
 ACCESS_USER = os.environ.get("ACCESS_USER", "demo")
 ACCESS_PASSWORD = os.environ.get("ACCESS_PASSWORD", "")
 
 SESSION_COOKIE = "wk_pass"
 
-# 不需要口令就能访问的路径：
-#   /login /logout —— 登录页自身，否则会陷入「要登录先登录」的死循环
-#   /api/health   —— 云平台靠它做健康检查，返 401 会被当成容器不健康而反复重启
-#   图标           —— 登录页上要显示，被挡住就只剩个碎图标
-PUBLIC_PATHS = {"/login", "/logout", "/api/health",
+# 任何情况下都不需要口令的路径
+PUBLIC_PATHS = {"/login", "/logout", "/api/auth", "/api/health",
                 "/favicon.ico", "/static/logo.svg"}
 
 
@@ -163,29 +167,87 @@ def _safe_next(target: str) -> str:
     return target
 
 
+# ----------------------------------------------------------------------
+# 哪些动作要口令
+# 用正则写成一张表，一眼能看出守的是什么，也免得以后新增接口时漏掉。
+# 浏览类（GET）一律不列进来 —— 看示例、看成片、看历史项目都是公开的。
+#
+# 为什么 /api/settings/llm 也在这张表里：它除了检查「部署允不允许改配置」，
+# 还会往服务器上的 .env 写 API Key。而「部署允不允许」的依据是
+# 「服务是不是只监听本机」—— 走隧道时服务仍监听 127.0.0.1，
+# 程序会误判为安全。所以必须先用口令确认身份，再看部署策略。
+# ----------------------------------------------------------------------
+_PROTECTED_ACTIONS = (
+    ("POST",   re.compile(r"^/api/projects/?$")),               # 开始创作
+    ("POST",   re.compile(r"^/api/projects/[^/]+/revise/?$")),  # 修改后重做
+    ("POST",   re.compile(r"^/api/projects/[^/]+/cancel/?$")),  # 取消他人任务
+    ("DELETE", re.compile(r"^/api/projects/[^/]+/?$")),         # 删除作品
+    ("POST",   re.compile(r"^/api/settings/llm/?$")),           # 写 API Key
+)
+
+# 已退出的会话令牌（只存内存）。
+# 为什么需要：令牌是由口令派生出来的（这样服务重启后大家的 Cookie 不会失效），
+# 派生意味着它「算得出来」、服务端无状态，光删浏览器那个 Cookie 并不算数。
+# 把退出过的令牌记下来，就能让它立刻作废 —— 在共用电脑上讲完课点个退出，
+# 下一个人就不能顶着你的身份接着用。
+#
+# 两个必须知道的边界：
+#   1. 有人再用口令登录时，这里会把它恢复（否刚谁都进不来）；
+#   2. 服务重启会丢掉这张表 —— 这是无状态换来的代价。
+# 想一次性踢掉所有人，改口令最彻底：令牌是口令派生的，一改全部失效。
+_LOGGED_OUT: set[str] = set()
+
+
+def _needs_pass(request: Request) -> bool:
+    for method, pattern in _PROTECTED_ACTIONS:
+        if request.method == method and pattern.match(request.url.path):
+            return True
+    return False
+
+
+def _authed(request: Request) -> bool:
+    """Cookie 会话或 Basic 认证任一通过即可"""
+    tok = request.cookies.get(SESSION_COOKIE, "")
+    if (tok and tok not in _LOGGED_OUT
+            and hmac.compare_digest(tok, _session_token())):
+        return True
+    return _check_basic(request.headers.get("authorization", ""))
+
+
+def _try_password(request: Request, password: str) -> tuple[bool, str, int]:
+    """校验口令并处理失败限流。返回 (是否通过, 错误文案, 建议状态码)"""
+    ip = _client_ip(request)
+    wait = _lock_seconds(ip)
+    if wait:
+        return False, f"口令错误次数过多，请等 {wait} 秒后再试。", 429
+    if not hmac.compare_digest(password or "", ACCESS_PASSWORD):
+        _note_fail(ip)
+        return False, "口令不对，请再试一次。", 401
+    _FAIL_LOG.pop(ip, None)
+    # 重新登录 = 重新启用这个令牌。
+    # 必须做这一步：令牌是口令的确定函数，所有人算出来是同一个值，
+    # 登出时把它拉黑，若不在这里恢复，之后任何人登录都会拿到同一个被拉黑的值，
+    # 结果就是谁都进不来。
+    _LOGGED_OUT.discard(_session_token())
+    return True, "", 200
+
+
 @app.middleware("http")
 async def _access_gate(request: Request, call_next):
-    """公网部署的防盗用门禁：生成视频要烧 CPU 和大模型额度，别让人白用。
+    """只守「创作」类动作，其余一律放行。
 
     放行 /api/health：它只有版本号、模型名、字体名这类信息，不含密钥，
     而云平台要靠它做健康检查（若被 401 挡住，容器会被判定不健康而反复重启）。
     """
     if not ACCESS_PASSWORD or request.url.path in PUBLIC_PATHS:
         return await call_next(request)
-
-    if (hmac.compare_digest(request.cookies.get(SESSION_COOKIE, ""),
-                           _session_token())
-            or _check_basic(request.headers.get("authorization", ""))):
+    if not _needs_pass(request) or _authed(request):
         return await call_next(request)
 
-    # 没登录：接口直接返 401 好让前端识别，页面则跳登录页
-    if request.url.path.startswith("/api/"):
-        return JSONResponse(
-            {"error": "未登录或登录已过期，请刷新页面后重新输入口令"},
-            status_code=401)
-    # safe="" 是为了连 / 也转义：路径里万一带 & 或 ? 就不会把参数拆坏
-    return RedirectResponse(f"/login?next={quote(request.url.path, safe='')}",
-                            status_code=303)
+    # need_pass 是给前端看的标记：前端收到它就弹口令框，填对了自动重试原请求
+    return JSONResponse(
+        {"error": "这个操作需要访问口令", "need_pass": True},
+        status_code=401)
 
 
 # 登录页整页自带样式，不引用 /static 里的 css：
@@ -300,24 +362,7 @@ def login_page(request: Request, next: str = "/"):
     return _render_login(_safe_next(next))
 
 
-@app.post("/login")
-async def do_login(request: Request, password: str = Form(""),
-                   next: str = Form("/")):
-    if not ACCESS_PASSWORD:
-        return RedirectResponse("/", status_code=303)
-
-    ip = _client_ip(request)
-    wait = _lock_seconds(ip)
-    if wait:
-        return _render_login(_safe_next(next),
-                             f"口令错误次数过多，请等 {wait} 秒后再试。")
-
-    if not hmac.compare_digest(password, ACCESS_PASSWORD):
-        _note_fail(ip)
-        return _render_login(_safe_next(next), "口令不对，请再试一次。")
-
-    _FAIL_LOG.pop(ip, None)
-    resp = RedirectResponse(_safe_next(next), status_code=303)
+def _set_session(resp: Response, request: Request) -> Response:
     resp.set_cookie(
         SESSION_COOKIE, _session_token(),
         max_age=30 * 24 * 3600, path="/",
@@ -326,8 +371,46 @@ async def do_login(request: Request, password: str = Form(""),
     return resp
 
 
+@app.post("/login")
+async def do_login(request: Request, password: str = Form(""),
+                   next: str = Form("/")):
+    """独立登录页的提交入口（直接用浏览器打开 /login 时用）"""
+    if not ACCESS_PASSWORD:
+        return RedirectResponse("/", status_code=303)
+    ok, err, _ = _try_password(request, password)
+    if not ok:
+        return _render_login(_safe_next(next), err)
+    return _set_session(RedirectResponse(_safe_next(next), status_code=303),
+                        request)
+
+
+@app.get("/api/auth")
+def auth_state(request: Request):
+    """前端靠它决定：要不要弹口令框、顶栏按钮该显示什么。
+
+    只暴露「要不要口令」和「当前是否已通过」，不泄露口令本身。
+    """
+    return {"required": bool(ACCESS_PASSWORD), "authed": _authed(request)}
+
+
+@app.post("/api/auth")
+async def do_auth(request: Request, password: str = Form("")):
+    """弹窗提交口令走这里：返回 JSON，前端不用跟 303 跳转打交道"""
+    if not ACCESS_PASSWORD:
+        return {"ok": True}
+    ok, err, status = _try_password(request, password)
+    if not ok:
+        return JSONResponse({"error": err}, status_code=status)
+    return _set_session(JSONResponse({"ok": True}), request)
+
+
 @app.get("/logout")
 def logout():
+    # 光删浏览器那个 Cookie 不够：令牌是算得出来的，拿到过它的人还能接着用。
+    # 记下这个令牌，让它立即失效。
+    tok = _session_token()
+    if tok:
+        _LOGGED_OUT.add(tok)
     resp = RedirectResponse("/login", status_code=303)
     resp.delete_cookie(SESSION_COOKIE, path="/")
     return resp
@@ -352,6 +435,7 @@ async def _no_cache_static(request, call_next):
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 ALLOWED_EXT = {".pdf", ".ppt", ".pptx", ".doc", ".docx", ".txt", ".md"}
+MAX_UPLOAD_MB = 30   # 单份文档上限。上传接口不需要口令，总得有个封顶
 
 # ----------------------------------------------------------------------
 # 内存任务表：project_id -> {status, events[], result, error, cancel}
@@ -504,11 +588,23 @@ async def upload(file: UploadFile = File(...)):
         return JSONResponse(
             {"error": f"暂不支持 {ext} 格式，请上传 PDF / Word / PPT / TXT"},
             status_code=400)
+    # 分块读取 + 限总量。这个接口不需要口令，不能让人丢个几 GB 的文件
+    # 过来把内存吃光（云上免费档只有 512MB）。
+    buf = bytearray()
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        buf.extend(chunk)
+        if len(buf) > MAX_UPLOAD_MB * 1024 * 1024:
+            return JSONResponse(
+                {"error": f"文件超过 {MAX_UPLOAD_MB} MB 上限"}, status_code=413)
+    if not buf:
+        return JSONResponse({"error": "文件为空"}, status_code=400)
+    data = bytes(buf)
+
     fid = uuid.uuid4().hex[:12]
     path = os.path.join(UPLOAD_DIR, f"{fid}{ext}")
-    data = await file.read()
-    if not data:
-        return JSONResponse({"error": "文件为空"}, status_code=400)
     with open(path, "wb") as f:
         f.write(data)
 

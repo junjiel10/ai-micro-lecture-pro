@@ -915,6 +915,8 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 .modal-head .fx:hover { color: var(--danger); }
 .modal-tip { color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-loose); margin: 0 0 var(--sp-5); }
 .modal-foot { display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-5); }
+/* 口令弹窗里的错误提示：先占好高度，出错时弹窗不会跳一下 */
+.pass-err { min-height: 1.3em; margin: var(--sp-3) 0 0; color: var(--danger); font-size: var(--fs-sm); }
 .edit-list { display: grid; gap: var(--sp-3); max-height: 320px; overflow-y: auto; }
 .edit-row { display: flex; gap: var(--sp-3); align-items: flex-start; }
 .edit-row .no { flex: 0 0 64px; padding-top: var(--sp-3); font-size: var(--fs-sm); color: var(--accent); font-weight: var(--fw-semi); }

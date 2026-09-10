@@ -164,6 +164,10 @@ async function startCreate() {
     alert("请输入知识主题，或至少上传一份文档");
     return;
   }
+  // 口令就在这一刻问：浏览、选主题、传文档都不用，真正要烧 CPU 和
+  // 大模型额度时才要。取消的话什么都不动，界面保持原样。
+  if (!(await window.ensurePass())) return;
+
   state.running = true;
   state.events = 0;
   state.detail = null;
@@ -508,6 +512,9 @@ async function submitRevise() {
     return;
   }
 
+  // 重做同样要重跑配音 / 渲染 / 合成，所以也要口令
+  if (!(await window.ensurePass())) return;
+
   $("reviseGo").disabled = true;
   $("reviseGo").textContent = "重做中…";
   const fd = new FormData();
@@ -542,15 +549,22 @@ async function submitRevise() {
 /* ==================== 历史项目 ==================== */
 async function loadProjects() {
   try {
+    // 没通过口令就不显示删除按钮 —— 访客能看能播，但改不了作品。
+    // 这不是安全边界（后端照样会 401），只是别给访客摆一排按不动的按钮。
+    const auth = await window.getAuth();
+    const canManage = !auth.required || auth.authed;
+
     const d = await (await fetch("/api/projects")).json();
     const ul = $("projectList");
     ul.innerHTML = "";
     (d.items || []).forEach((p) => {
       const li = document.createElement("li");
       li.className = p.id === state.projectId ? "active" : "";
-      li.innerHTML = `<button class="pdel" type="button" title="删除这个项目"
-          aria-label="删除 ${esc(p.title)}">✕</button>
-        <span class="pt">${esc(p.title)}</span>
+      li.innerHTML = (canManage
+        ? `<button class="pdel" type="button" title="删除这个项目"
+            aria-label="删除 ${esc(p.title)}">✕</button>`
+        : "")
+        + `<span class="pt">${esc(p.title)}</span>
         <span class="pm">${p.created} · ${p.shots} 镜 · ${fmtDur(p.duration)}
         ${p.score != null ? " · 质检 " + p.score : ""}</span>`;
       li.onclick = () => {
@@ -567,10 +581,13 @@ async function loadProjects() {
         li.classList.add("active");
       };
       // 删除按钮：必须先 stopPropagation，否则会连带触发 li 的「打开项目」
-      li.querySelector(".pdel").onclick = (ev) => {
-        ev.stopPropagation();
-        deleteProject(p.id, p.title);
-      };
+      const del = li.querySelector(".pdel");
+      if (del) {
+        del.onclick = (ev) => {
+          ev.stopPropagation();
+          deleteProject(p.id, p.title);
+        };
+      }
       ul.appendChild(li);
     });
     if (!(d.items || []).length) {
@@ -583,6 +600,8 @@ async function loadProjects() {
    删的是 output/<项目号>/ 整个目录，所以首页「示例作品」也会同步消失
    （那个页面读同一个 /api/projects 接口）。 */
 async function deleteProject(pid, title) {
+  // 已通过就问不出来（ensurePass 直接返 true）；会话过期了就在这补问一次
+  if (!(await window.ensurePass())) return;
   const ok = window.confirm(
     `确定删除「${title}」吗？\n\n` +
     `画面、配音、字幕与成片会一起删掉，且无法恢复。`);
