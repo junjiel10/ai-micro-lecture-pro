@@ -213,39 +213,60 @@ Space 页面 → **Settings** → **Variables and secrets** → New secret：
 
 | 脚本 | 作用 |
 |---|---|
-| `start-public.bat` | 一键分享：提示输入口令 → 启服务 → 建隧道 → 打印网址 |
+| `start-public.bat` | 开始分享：提示输入口令 → 启服务（8010）→ 建隧道 → 打印网址 |
+| `stop-public.bat` | 停止分享：按端口找进程结束，不依赖窗口标题匹配 |
+| `tools\tunnel.ps1` | 隧道本体：保活 + 断线自动重连（由 start-public.bat 调用） |
 | `tools\get-cloudflared.bat` | 可选备用：换成 cloudflared 隧道（要下 52MB，国内可能很慢） |
+
+> **为什么用 8010 而不是默认的 8000**：8000 很可能是你「本机自用」
+> 实例的端口 —— 那边没有口令。一旦撞上，脚本的服务会启动失败，
+> 而隧道却会把那个没口令的实例暴露到公网去。
 
 手工做法也可以（等价于脚本里干的事）：
 
 ```powershell
-# 终端 1：启动服务（注意这两个环境变量，见下方警告）
+# 终端 1：启动服务（注意这几个环境变量，见下方警告）
+$env:HOST='127.0.0.1'
+$env:PORT='8010'          # 避开本机自用的 8000
 $env:ALLOW_WEB_SETTINGS='0'
 $env:ACCESS_PASSWORD='自己定的口令'
-.\venv\Scripts\python.exe app.py
+.\.venv\Scripts\python.exe app.py
 
-# 终端 2：建立隧道（localhost.run 免费匿名隧道，无需注册）
-ssh -o StrictHostKeyChecking=accept-new -R 80:127.0.0.1:8000 nokey@localhost.run
+# 终端 2：建隧道 + 保活 + 自动重连（推荐就直接用它）
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\tunnel.ps1 -Port 8010
 ```
 
 拿到形如 `https://xxxx.lhr.life` 的地址就能分享出去。
 对方打开**不用口令就能看完整站**（包括你的示例作品）；
 只有点「开始制作」时才会弹框要口令。
 
-> **两个坑，踩过了所以写在这：**
+> **四个坑，踩过了所以写在这：**
 >
 > 1. **转发目标写 `127.0.0.1`，别写 `localhost`。**
 >    Windows 上 `localhost` 会优先解析成 IPv6 的 `::1`，而程序只监听 IPv4，
 >    结果隧道建起来了但请求转不进去，访问报 `Empty reply from server`。
-> 2. **免费隧道的地址会变。** 匿名用户拿到的是随机域名，重连 / 重启脚本后
->    可能换成另一个地址（旧地址立刻失效）。地址变了就重新运行脚本。
->    对地址稳定性有要求时，登录 localhost.run 绑定 SSH 公钥可拿到相对固定的域名，
->    或改用 cloudflared。
+> 2. **免费匿名隧道有「闲置超时」。** 实测跑着跑着会收到
+>    `Received disconnect: tunnel inactivity timeout` —— 一段时间没有流量
+>    经过就会被服务端掐断。`tunnel.ps1` 每 60 秒探一次活就是为了治这个。
+> 3. **重连后网址可能会变**，以新打印的为准（旧地址立刻失效）。
+>    想彻底固定可以注册 localhost.run 账号并绑 SSH 公钥，或改用 cloudflared。
+> 4. **不要用 8000 端口做分享**（理由见上面那个提示框）。
+>
+> 另外，写 PowerShell 脚本时踩的三个编码/环境坑（已修，别改回去）：
+>
+> - **`.ps1` 必须带 UTF-8 BOM。** Windows PowerShell 5.1 读 `.ps1` 默认按
+>   ANSI（中文系统是 GBK），UTF-8 无 BOM 时中文会把引号解析错，
+>   报「字符串缺少终止符」。
+> - **不要强行设 `[Console]::OutputEncoding`**，会和实际代码页打架，
+>   中文出现「正正在在」这种字符翻倍。
+> - **探活用 `curl.exe --noproxy '*'` 而不是 `Invoke-WebRequest`**：
+>   后者会走系统代理，用户开着代理时请求会被路由到别处，
+>   探活就成了假成功，看日志才发现根本没到服务器。
 
 | | 说明 |
 |---|---|
 | 优点 | 零成本、速度最快（用你本机的 CPU 与内存） |
-| 缺点 | **电脑必须开着**，休眠 / 关机链接就失效；网址每次重启会换 |
+| 缺点 | **电脑必须开着**，休眠 / 关机链接就失效；免费隧道的网址重启后会换 |
 | 适合 | 课堂演示、答辩、临时给几个人试用 |
 
 > ### ⚠️ 走隧道建议关掉「网页端改配置」

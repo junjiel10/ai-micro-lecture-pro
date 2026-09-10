@@ -29,6 +29,25 @@ $logOut = Join-Path $env:TEMP 'wk-tunnel.out.log'
 $logErr = Join-Path $env:TEMP 'wk-tunnel.err.log'
 $urlPattern = 'https://[0-9a-z]+\.lhr\.life'
 
+function Read-Log([string]$path) {
+    <#
+      为什么不用 Get-Content：
+      ssh 正开着这个文件往里写（由 cmd 的重定向句柄持有），
+      Get-Content 可能因共享模式而读失败。这里显式用 FileShare.ReadWrite
+      打开，保证一边写一边读也拿得到内容。
+    #>
+    if (-not (Test-Path $path)) { return '' }
+    try {
+        $fs = [System.IO.File]::Open($path, 'Open', 'Read', 'ReadWrite')
+        $sr = New-Object System.IO.StreamReader($fs)
+        $t = $sr.ReadToEnd()
+        $sr.Close(); $fs.Close()
+        return $t
+    } catch {
+        return ''
+    }
+}
+
 $round = 0
 while ($true) {
     $round++
@@ -53,9 +72,19 @@ while ($true) {
 
     $proc = $null
     try {
-        $proc = Start-Process -FilePath 'ssh' -ArgumentList $sshArgs `
-            -NoNewWindow -PassThru `
-            -RedirectStandardOutput $logOut -RedirectStandardError $logErr
+        <#
+          为什么套一层 cmd 而不直接用 Start-Process -RedirectStandardOutput：
+          那种写法下 PowerShell 是建一根管道，再靠后台线程把内容搬到文件。
+          主线程在跑密集轮询时数据搬不过去 —— 实测日志一直是 0 字节，
+          同一个 ssh 命令手工单独跑却有输出。
+          交给 cmd 做 “> 文件” 重定向，ssh 直接写文件句柄，就没这个问题。
+        #>
+        $argLine = ($sshArgs | ForEach-Object {
+            if ($_ -match '[ "]') { '"' + $_ + '"' } else { $_ }
+        }) -join ' '
+        $cmdLine = "ssh $argLine > `"$logOut`" 2> `"$logErr`""
+        $proc = Start-Process -FilePath $env:ComSpec -ArgumentList '/c', $cmdLine `
+            -NoNewWindow -PassThru
     } catch {
         Write-Host "  [!] 起不来 ssh：$($_.Exception.Message)" -ForegroundColor Red
         Start-Sleep -Seconds 5
@@ -67,19 +96,14 @@ while ($true) {
     $url = $null
     $lastPing = Get-Date
     $waited = 0
+    $failStreak = 0
 
     while (-not $proc.HasExited) {
         Start-Sleep -Seconds 1
         $waited++
 
         if (-not $url) {
-            $raw = @()
-            foreach ($f in @($logOut, $logErr)) {
-                if (Test-Path $f) {
-                    $raw += (Get-Content $f -Raw -ErrorAction SilentlyContinue)
-                }
-            }
-            $text = ($raw -join "`n")
+            $text = (Read-Log $logOut) + "`n" + (Read-Log $logErr)
             $m = [regex]::Match($text, $urlPattern)
             if ($m.Success) {
                 $url = $m.Value
@@ -112,9 +136,21 @@ while ($true) {
                                 --max-time 15 "$url/api/health" 2>$null
             $stamp = (Get-Date).ToString('HH:mm:ss')
             if ("$code" -eq '200') {
+                $failStreak = 0
                 Write-Host "  [保活] $stamp  正常" -ForegroundColor DarkGray
             } else {
-                Write-Host "  [保活] $stamp  没通（HTTP $code）—— 可能已被掐断，等自动重连" -ForegroundColor DarkYellow
+                $failStreak++
+                Write-Host "  [保活] $stamp  没通（HTTP $code），连续 $failStreak 次" -ForegroundColor DarkYellow
+                <#
+                  关键：localhost.run 可以把隧道作废而 SSH 连接依然活着，
+                  那时候返回 503 / 连不上，但 ssh 进程不会退出，
+                  “等 HasExited” 就永远等不到。所以探活连续失败时要主动重建。
+                  杀整个进程树（cmd → ssh），循环条件就会感知到并重连。
+                #>
+                if ($failStreak -ge 2) {
+                    Write-Host '  连续两次没通，判定隧道已失效，正在重建…' -ForegroundColor DarkYellow
+                    & taskkill /PID $proc.Id /T /F 2>$null | Out-Null
+                }
             }
         }
     }
