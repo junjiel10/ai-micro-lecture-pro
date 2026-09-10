@@ -6,7 +6,7 @@
 <meta name="description" content="妙课生花 WonderKourse：输入一个知识主题或上传文档，自动完成脚本、配音、画面、字幕、剪辑与导出，产出可直接使用的微课视频。">
 <title>妙课生花 WonderKourse · 让创意开成一堂课</title>
 <link rel="icon" type="image/svg+xml" href="/static/logo.svg?v=1.4.0">
-<link rel="stylesheet" href="/static/css/style.css?v=2.0.0">
+<link rel="stylesheet" href="/static/css/style.css?v=2.1.0">
 <script>
   /* 入场动画总开关：先打标记，CSS 才会把内容藏起来再淡入（避免闪烁）。
      万一主脚本 3 秒内没能接管（加载失败 / 被拦截），自动撤掉标记，
@@ -29,9 +29,9 @@
     <span class="brand-text"><b>妙课生花</b><i>WonderKourse</i></span>
   </a>
   <nav class="nav-links" id="navLinks">
-    <a href="#works">示例作品</a>
+    <a href="#modes">创作模式</a>
     <a href="#how">工作流程</a>
-    <a href="#modes" data-hide-sm>创作模式</a>
+    <a href="#works" data-hide-sm>示例作品</a>
     <a href="/guide">使用指南</a>
     <button class="btn small primary" type="button" id="loginBtn">登录 / 注册</button>
   </nav>
@@ -66,15 +66,36 @@
   </div>
 </section>
 
-<!-- ============================ 示例作品 ============================ -->
-<section class="section reveal" id="works">
+<!-- ============================ 创作模式 ============================ -->
+<section class="section reveal" id="modes">
   <div class="section-head">
-    <span class="section-label">Examples</span>
-    <h2>示例作品</h2>
-    <p>点击卡片即可在线播放 —— 全部由本系统自动生成，未经剪辑</p>
+    <span class="section-label">Modes</span>
+    <h2>两种创作模式</h2>
+    <p>选一种，输入提示词，剩下的交给系统</p>
   </div>
-  <div class="works-grid" id="worksGrid">
-    <div class="empty">暂无作品，进入创作台生成第一支微课。</div>
+  <div class="mode-grid">
+    <a class="mode-card" href="/create?mode=topic">
+      <div class="mode-icon">💡</div>
+      <h3>主题驱动模式</h3>
+      <p>只给一个知识主题，系统自动完成知识结构化、撰写旁白稿、规划分镜与画面版式。</p>
+      <ul>
+        <li>适合概念讲解、原理科普、教学微课</li>
+        <li>内置学科知识骨架，无需任何 API Key</li>
+        <li>自动排布 8~12 个分镜，成片约 3~5 分钟</li>
+      </ul>
+      <span class="mode-go">进入创作台 →</span>
+    </a>
+    <a class="mode-card" href="/create?mode=doc">
+      <div class="mode-icon">📄</div>
+      <h3>文档精讲模式</h3>
+      <p>上传 PDF / Word / PPT / 教案，系统提炼要点并按教学逻辑重组为讲解视频。</p>
+      <ul>
+        <li>把现成教案、论文、课件快速变成微课</li>
+        <li>旁白直接依据文档要点，减少二次录入</li>
+        <li>自动识别关键词与关键句，并标注来源</li>
+      </ul>
+      <span class="mode-go">上传文档 →</span>
+    </a>
   </div>
 </section>
 
@@ -130,36 +151,15 @@
   </p>
 </section>
 
-<!-- ============================ 创作模式 ============================ -->
-<section class="section reveal" id="modes">
+<!-- ============================ 示例作品 ============================ -->
+<section class="section reveal" id="works">
   <div class="section-head">
-    <span class="section-label">Modes</span>
-    <h2>两种创作模式</h2>
-    <p>选一种，输入提示词，剩下的交给系统</p>
+    <span class="section-label">Examples</span>
+    <h2>示例作品</h2>
+    <p>点击卡片即可在线播放 —— 全部由本系统自动生成，未经剪辑</p>
   </div>
-  <div class="mode-grid">
-    <a class="mode-card" href="/create?mode=topic">
-      <div class="mode-icon">💡</div>
-      <h3>主题驱动模式</h3>
-      <p>只给一个知识主题，系统自动完成知识结构化、撰写旁白稿、规划分镜与画面版式。</p>
-      <ul>
-        <li>适合概念讲解、原理科普、教学微课</li>
-        <li>内置学科知识骨架，无需任何 API Key</li>
-        <li>自动排布 8~12 个分镜，成片约 3~5 分钟</li>
-      </ul>
-      <span class="mode-go">进入创作台 →</span>
-    </a>
-    <a class="mode-card" href="/create?mode=doc">
-      <div class="mode-icon">📄</div>
-      <h3>文档精讲模式</h3>
-      <p>上传 PDF / Word / PPT / 教案，系统提炼要点并按教学逻辑重组为讲解视频。</p>
-      <ul>
-        <li>把现成教案、论文、课件快速变成微课</li>
-        <li>旁白直接依据文档要点，减少二次录入</li>
-        <li>自动识别关键词与关键句，并标注来源</li>
-      </ul>
-      <span class="mode-go">上传文档 →</span>
-    </a>
+  <div class="works-grid" id="worksGrid">
+    <div class="empty">暂无作品，进入创作台生成第一支微课。</div>
   </div>
 </section>
 
@@ -186,9 +186,9 @@
     <div class="foot-col">
       <h5>产品</h5>
       <ul>
-        <li><a href="#works">示例作品</a></li>
-        <li><a href="#how">工作流程</a></li>
         <li><a href="#modes">创作模式</a></li>
+        <li><a href="#how">工作流程</a></li>
+        <li><a href="#works">示例作品</a></li>
         <li><a href="/create">创作台</a></li>
       </ul>
     </div>

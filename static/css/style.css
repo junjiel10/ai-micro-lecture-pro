@@ -331,8 +331,12 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 .pill.green { background: var(--success-soft); color: var(--success); border-color: var(--success-line); }
 .pill.orange { background: var(--warning-soft); color: var(--warning); border-color: var(--warning-line); }
 
-/* ---------- 区块 ---------- */
-.section { max-width: var(--page-max); margin: 0 auto; padding: var(--sp-10) var(--gutter); }
+/* ---------- 区块 ----------
+   纵向节奏：每个区块上下各 56px（sp-9），相邻两块 border-box 相接，
+   实际留白恒为 112px；移动端降到 40px（sp-8）→ 80px。
+   想调整页疏密只改这一处 —— 不要在单个区块上加 margin，
+   相邻 margin 会折叠，算不清。（hero / cta-band / 页脚同属这套节奏） */
+.section { max-width: var(--page-max); margin: 0 auto; padding: var(--sp-9) var(--gutter); }
 .section-head { text-align: center; margin-bottom: var(--sp-8); }
 .section-head h2 { margin-bottom: var(--sp-3); }
 .section-head p { color: var(--text-muted); font-size: var(--fs-body-lg); }
@@ -405,7 +409,7 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 
 /* 页脚 */
 .site-foot {
-  margin-top: var(--sp-10);
+  margin-top: var(--sp-9);
   border-top: 1px solid var(--line);
   background: var(--bg-deep);
 }
@@ -441,9 +445,11 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 /* ==========================================================================
    5. 首页
    ========================================================================== */
-.hero { max-width: 1100px; margin: 0 auto; padding: var(--sp-10) var(--gutter); text-align: center; }
+.hero { max-width: 1100px; margin: 0 auto; padding: var(--sp-10) var(--gutter) var(--sp-9); text-align: center; }
 
-.hero h1 { font-size: var(--fs-display); line-height: 1.18; margin-bottom: var(--sp-5); font-weight: var(--fw-black); }
+/* 顶部 80px 是导航栏下方的呼吸区；底部与 .section 一致是 56px，
+   所以 hero → 第一个区块的留白同样是 112px */
+.hero h1 { font-size: var(--fs-display); line-height: 1.18; margin-bottom: var(--sp-6); font-weight: var(--fw-black); }
 .hero h1 em {
   font-style: normal;
   background: linear-gradient(120deg, var(--brand-600), var(--bloom-500));
@@ -491,7 +497,9 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 .mode-card:active { transform: translateY(-2px); }
 .mode-icon { font-size: var(--fs-h1); margin-bottom: var(--sp-4); }
 .mode-card h3 { font-size: var(--fs-h3); margin-bottom: var(--sp-3); }
-.mode-card > p { color: var(--text-muted); font-size: var(--fs-body); line-height: var(--lh-normal); margin-bottom: var(--sp-5); }
+/* 卡片内的字号阶梯：h3 20px → 说明段 15.5px → 要点列表 14px。
+   说明段与 .section-head p 同为 15.5px，全站「说明文字」保持同一级。 */
+.mode-card > p { color: var(--text-muted); font-size: var(--fs-body-lg); line-height: var(--lh-normal); margin-bottom: var(--sp-5); }
 .mode-card ul { margin: 0 0 var(--sp-6); padding-left: var(--sp-5); color: var(--text-muted); font-size: var(--fs-body); line-height: var(--lh-loose); }
 .mode-card li::marker { color: var(--accent); }
 .mode-go { color: var(--accent); font-weight: var(--fw-semi); font-size: var(--fs-body); }
@@ -541,7 +549,7 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
   box-shadow: 0 6px 16px rgba(242, 102, 162, 0.28);
 }
 .howto-step h4 { font-size: var(--fs-body-lg); }
-.howto-step p { color: var(--text-faint); font-size: var(--fs-sm); line-height: var(--lh-normal); }
+.howto-step p { color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-normal); }
 
 .howto-note {
   margin-top: var(--sp-7); padding: var(--sp-5) var(--sp-6);
@@ -991,7 +999,7 @@ details.faq-item[open] summary::after { content: "－"; }
 details.faq-item p { margin-top: var(--sp-3); color: var(--text-muted); font-size: var(--fs-body); line-height: var(--lh-normal); }
 
 .cta-band {
-  max-width: var(--page-max); margin: 0 auto; padding: var(--sp-10) var(--gutter);
+  max-width: var(--page-max); margin: 0 auto; padding: var(--sp-9) var(--gutter);
   text-align: center;
 }
 .cta-band .inner {
@@ -1041,8 +1049,8 @@ details.faq-item p { margin-top: var(--sp-3); color: var(--text-muted); font-siz
   .log-box { min-height: 220px; }
 
   .howto::before { display: none; }
-  .hero { padding-top: var(--sp-9); }
-  .section { padding: var(--sp-9) var(--gutter); }
+  .hero { padding-top: var(--sp-9); padding-bottom: var(--sp-8); }
+  .section { padding: var(--sp-8) var(--gutter); }
 }
 
 @media (max-width: 640px) {
