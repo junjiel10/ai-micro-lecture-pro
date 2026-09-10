@@ -50,6 +50,7 @@
   }
 
   var LOGIN_NOTICE = "演示版免登录，直接体验；正式版将支持账号体系与个人作品库。";
+  var LOGOUT_HINT = "已通过访问口令进入。点击退出后，下次需要重新输入口令。";
 
   window.toast = toast;   // 供调试与后续复用
 
@@ -87,9 +88,29 @@
   }
 
   function initNav() {
-    /* 「登录 / 注册」是视觉占位：不跳转，只说明现状 */
+    /* 「登录 / 注册」按部署环境自动变身：
+         · 本机自用（没设口令）—— 保留占位按钮，点一下说明「免登录」
+         · 公网部署（设了口令）—— 已经是登录状态，按钮改成「退出登录」
+       不然会很难受：页面上写着「登录 / 注册」，点一下却告诉你「免登录」，
+       可你刚刚才输过口令。 */
     var login = $("loginBtn");
-    if (login) login.addEventListener("click", function () { toast(LOGIN_NOTICE); });
+    if (login) {
+      login.addEventListener("click", function () {
+        if (login.dataset.logout === "1") { window.location.href = "/logout"; return; }
+        toast(LOGIN_NOTICE);
+      });
+      // 先按占位行为渲染，探测到要口令再改（探测失败就保持占位）
+      fetch("/api/health", { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.auth_required) return;
+          login.textContent = "退出登录";
+          login.dataset.logout = "1";
+          login.title = LOGOUT_HINT;
+          login.setAttribute("aria-label", "退出登录");
+        })
+        .catch(function () { /* 保持占位行为 */ });
+    }
 
     initCollapse(document.querySelector(".nav"), $("navLinks"), $("navToggle"));       // 首页 / 指南页
     initCollapse(document.querySelector(".topbar"), $("topActions"), $("topToggle"));  // 创作台

@@ -11,16 +11,21 @@
 from __future__ import annotations
 
 import base64
+import functools
+import hashlib
 import hmac
+import html
 import json
 import os
 import shutil
 import threading
 import time
 import uuid
+from urllib.parse import quote
 
-from fastapi import FastAPI, File, Form, Request, Response, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse)
 from fastapi.staticfiles import StaticFiles
 
 from agent import config
@@ -60,35 +65,278 @@ def web_settings_allowed() -> bool:
     return _is_local_host()
 
 
-# 可选访问口令：设了 ACCESS_PASSWORD 就启用 HTTP Basic 认证
-# （浏览器会弹原生登录框，不需要额外做登录页）。留空 = 不开启。
+# ======================================================================
+# 访问口令门禁
+# ----------------------------------------------------------------------
+# 为什么不直接用 HTTP Basic 认证（让浏览器自己弹原生登录框）就完事：
+# 那个弹窗完全依赖浏览器的实现。VS Code 内置浏览器、各类 App 的 webview、
+# 部分手机浏览器压根不弹，用户只会看到一行 401 的纯文本「需要访问口令」，
+# 页面上没有任何地方能输入 —— 这正是我们实际踩到的坑。
+# 所以这里自己做一套登录页 + Cookie 会话；同时**保留** Basic 认证，
+# curl / 脚本仍可用 -u 账号:口令 直接访问，自动化不受影响。
+# ======================================================================
 ACCESS_USER = os.environ.get("ACCESS_USER", "demo")
 ACCESS_PASSWORD = os.environ.get("ACCESS_PASSWORD", "")
+
+SESSION_COOKIE = "wk_pass"
+
+# 不需要口令就能访问的路径：
+#   /login /logout —— 登录页自身，否则会陷入「要登录先登录」的死循环
+#   /api/health   —— 云平台靠它做健康检查，返 401 会被当成容器不健康而反复重启
+#   图标           —— 登录页上要显示，被挡住就只剩个碎图标
+PUBLIC_PATHS = {"/login", "/logout", "/api/health",
+                "/favicon.ico", "/static/logo.svg"}
+
+
+@functools.lru_cache(maxsize=1)
+def _session_token() -> str:
+    """由口令派生出会话 Cookie 的值。
+
+    为什么不随机生成：Render 免费档闲置十几分钟就休眠，一被访问就重启，
+    进程级的随机密钥会随之丢掉，用户得反复登录。由口令派生则稳定，
+    服务重启后 Cookie 依然有效。
+
+    为什么用 PBKDF2 迭代而不是一次 sha256：Cookie 万一泄露，
+    攻击者可以拿它离线穷举口令，迭代 12 万次能让这种穷举贵得多。
+    """
+    if not ACCESS_PASSWORD:
+        return ""
+    return hashlib.pbkdf2_hmac(
+        "sha256", ACCESS_PASSWORD.encode("utf-8"),
+        b"wonderkourse-session-v1", 120_000).hex()
+
+
+def _check_basic(auth: str) -> bool:
+    """兼容命令行客户端：curl -u demo:口令 https://..."""
+    if auth[:6].lower() != "basic ":
+        return False
+    try:
+        raw = base64.b64decode(auth[6:]).decode("utf-8")
+        user, _, pwd = raw.partition(":")
+        return user == ACCESS_USER and hmac.compare_digest(pwd, ACCESS_PASSWORD)
+    except Exception:
+        return False
+
+
+# 登录失败限流：网址可能被转发出去，得防住有人拿字典慢慢试口令
+_FAIL_LOG: dict[str, list[float]] = {}
+_FAIL_LIMIT = 10       # 同一 IP 连续失败达到这个次数
+_FAIL_WINDOW = 600     # 就锁定这么多秒
+
+
+def _client_ip(request: Request) -> str:
+    """Render 这类平台会把真实客户端 IP 放在 X-Forwarded-For，取第一段"""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "?"
+
+
+def _lock_seconds(ip: str) -> int:
+    """还要等几秒才能再试；0 表示没被锁"""
+    now = time.time()
+    hits = [t for t in _FAIL_LOG.get(ip, []) if now - t < _FAIL_WINDOW]
+    _FAIL_LOG[ip] = hits
+    if len(hits) < _FAIL_LIMIT:
+        return 0
+    return int(_FAIL_WINDOW - (now - hits[0])) + 1
+
+
+def _note_fail(ip: str) -> None:
+    _FAIL_LOG.setdefault(ip, []).append(time.time())
+
+
+def _is_https(request: Request) -> bool:
+    """服务跑在平台反代后面，看 X-Forwarded-Proto 更准"""
+    return (request.url.scheme == "https"
+            or "https" in request.headers.get("x-forwarded-proto", "").lower())
+
+
+def _safe_next(target: str) -> str:
+    """只允许跳回本站路径。
+
+    必须挡住 //evil.com 这种「协议相对」写法，
+    否则别人发个 ?next=//evil.com 的链接给你，登录后就被带去外站了。
+    """
+    if not target.startswith("/") or target[1:2] in ("/", "\\"):
+        return "/"
+    return target
 
 
 @app.middleware("http")
 async def _access_gate(request: Request, call_next):
     """公网部署的防盗用门禁：生成视频要烧 CPU 和大模型额度，别让人白用。
 
-    /api/health 放行：它只有版本号、模型名、字体名这类信息，不含密钥，
-    而云平台要靠它做健康检查（若被 401 挡住，容器会被判定为不健康而反复重启）。
+    放行 /api/health：它只有版本号、模型名、字体名这类信息，不含密钥，
+    而云平台要靠它做健康检查（若被 401 挡住，容器会被判定不健康而反复重启）。
     """
-    if ACCESS_PASSWORD and request.url.path != "/api/health":
-        ok = False
-        auth = request.headers.get("authorization", "")
-        if auth[:6].lower() == "basic ":
-            try:
-                raw = base64.b64decode(auth[6:]).decode("utf-8")
-                user, _, pwd = raw.partition(":")
-                ok = user == ACCESS_USER and hmac.compare_digest(pwd, ACCESS_PASSWORD)
-            except Exception:
-                ok = False
-        if not ok:
-            return Response(
-                content="需要访问口令", status_code=401,
-                headers={"WWW-Authenticate": 'Basic realm="WonderKourse"'},
-            )
-    return await call_next(request)
+    if not ACCESS_PASSWORD or request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    if (hmac.compare_digest(request.cookies.get(SESSION_COOKIE, ""),
+                           _session_token())
+            or _check_basic(request.headers.get("authorization", ""))):
+        return await call_next(request)
+
+    # 没登录：接口直接返 401 好让前端识别，页面则跳登录页
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(
+            {"error": "未登录或登录已过期，请刷新页面后重新输入口令"},
+            status_code=401)
+    # safe="" 是为了连 / 也转义：路径里万一带 & 或 ? 就不会把参数拆坏
+    return RedirectResponse(f"/login?next={quote(request.url.path, safe='')}",
+                            status_code=303)
+
+
+# 登录页整页自带样式，不引用 /static 里的 css：
+# 那些静态资源本身在门禁后面，登录前根本加载不到。
+LOGIN_PAGE = """<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>访问口令 · 妙课生花 WonderKourse</title>
+<link rel="icon" href="/static/logo.svg">
+<style>
+  :root{
+    --brand-50:#f7f4ff; --brand-600:#7c4ded; --brand-700:#6534cf;
+    --bloom-50:#fff5fa; --bloom-500:#f266a2;
+    --ink-900:#241a42; --ink-600:#5d4f7d; --ink-400:#7c6f9c;
+    --line:rgba(124,77,237,.13); --line-strong:rgba(124,77,237,.24);
+    --danger:#d23f36; --danger-soft:rgba(210,63,54,.09);
+    --danger-line:rgba(210,63,54,.28);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+    font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",
+      system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink-900);-webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(880px 480px at 12% -12%,rgba(124,77,237,.17),transparent 62%),
+      radial-gradient(720px 460px at 102% 112%,rgba(242,102,162,.17),transparent 62%),
+      linear-gradient(160deg,var(--brand-50),var(--bloom-50));
+  }
+  .card{
+    width:100%;max-width:404px;background:#fff;border:1px solid var(--line);
+    border-radius:22px;padding:40px 36px 32px;text-align:center;
+    box-shadow:0 24px 60px -18px rgba(52,33,105,.22),0 2px 8px rgba(52,33,105,.05);
+    animation:rise .5s cubic-bezier(.22,.9,.29,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none}}
+  .logo{display:block;width:60px;height:60px;margin:0 auto 18px;
+    filter:drop-shadow(0 8px 18px rgba(124,77,237,.28))}
+  h1{margin:0;font-size:26px;letter-spacing:.5px;
+    background:linear-gradient(96deg,var(--brand-600),var(--bloom-500));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand-en{margin:6px 0 0;font-size:12px;letter-spacing:2.4px;
+    text-transform:uppercase;color:var(--ink-400)}
+  .lede{margin:22px 0 0;font-size:14.5px;line-height:1.75;color:var(--ink-600)}
+  .err{margin:20px 0 0;padding:11px 14px;border-radius:11px;font-size:13.5px;
+    color:var(--danger);background:var(--danger-soft);
+    border:1px solid var(--danger-line)}
+  form{margin-top:24px;text-align:left}
+  label{display:block;font-size:13px;font-weight:600;
+    color:var(--ink-600);margin-bottom:8px}
+  input[type=password]{
+    width:100%;padding:13px 15px;font-size:15px;font-family:inherit;
+    color:var(--ink-900);background:#fbfaff;border:1.5px solid var(--line-strong);
+    border-radius:12px;outline:none;
+    transition:border-color .18s,box-shadow .18s,background .18s;
+  }
+  input[type=password]::placeholder{color:#a99fc4}
+  input[type=password]:focus{background:#fff;border-color:var(--brand-600);
+    box-shadow:0 0 0 4px rgba(124,77,237,.14)}
+  button{
+    width:100%;margin-top:16px;padding:13px 18px;font-size:15px;font-weight:600;
+    font-family:inherit;color:#fff;cursor:pointer;border:0;border-radius:12px;
+    background:linear-gradient(96deg,var(--brand-600),var(--brand-700));
+    box-shadow:0 8px 20px -6px rgba(124,77,237,.55);
+    transition:transform .16s,box-shadow .16s,filter .16s;
+  }
+  button:hover{transform:translateY(-1px);filter:brightness(1.06);
+    box-shadow:0 12px 26px -8px rgba(124,77,237,.6)}
+  button:active{transform:translateY(0)}
+  .foot{margin:22px 0 0;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12.5px;line-height:1.7;color:var(--ink-400)}
+</style>
+</head>
+<body>
+<main class="card">
+  <img class="logo" src="/static/logo.svg" alt="妙课生花" width="60" height="60">
+  <h1>妙课生花</h1>
+  <p class="brand-en">WonderKourse</p>
+  <p class="lede">这个站点需要一个访问口令才能进入。<br>口令请向把网址分享给你的人索取。</p>
+  __ERROR__
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="__NEXT__">
+    <label for="pw">访问口令</label>
+    <input id="pw" name="password" type="password" required autofocus
+           autocomplete="current-password" placeholder="请输入口令">
+    <button type="submit">进入实验室</button>
+  </form>
+  <p class="foot">口令仅用于验证身份，不会上传或记录。</p>
+</main>
+</body>
+</html>
+"""
+
+
+def _render_login(next_url: str = "/", error: str = "") -> HTMLResponse:
+    page = LOGIN_PAGE.replace("__NEXT__", html.escape(next_url, quote=True))
+    page = page.replace("__ERROR__",
+                        f'<p class="err" role="alert">{html.escape(error)}</p>'
+                        if error else "")
+    return HTMLResponse(page, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/login")
+def login_page(request: Request, next: str = "/"):
+    # 已经登录过就别再看登录页了
+    if hmac.compare_digest(request.cookies.get(SESSION_COOKIE, ""),
+                           _session_token()):
+        return RedirectResponse(_safe_next(next), status_code=303)
+    return _render_login(_safe_next(next))
+
+
+@app.post("/login")
+async def do_login(request: Request, password: str = Form(""),
+                   next: str = Form("/")):
+    if not ACCESS_PASSWORD:
+        return RedirectResponse("/", status_code=303)
+
+    ip = _client_ip(request)
+    wait = _lock_seconds(ip)
+    if wait:
+        return _render_login(_safe_next(next),
+                             f"口令错误次数过多，请等 {wait} 秒后再试。")
+
+    if not hmac.compare_digest(password, ACCESS_PASSWORD):
+        _note_fail(ip)
+        return _render_login(_safe_next(next), "口令不对，请再试一次。")
+
+    _FAIL_LOG.pop(ip, None)
+    resp = RedirectResponse(_safe_next(next), status_code=303)
+    resp.set_cookie(
+        SESSION_COOKIE, _session_token(),
+        max_age=30 * 24 * 3600, path="/",
+        httponly=True, samesite="lax", secure=_is_https(request),
+    )
+    return resp
+
+
+@app.get("/logout")
+def logout():
+    resp = RedirectResponse("/login", status_code=303)
+    resp.delete_cookie(SESSION_COOKIE, path="/")
+    return resp
+
+
+@app.get("/favicon.ico")
+def favicon():
+    """浏览器总会来要这个，指到 logo 上，省得日志里刷 404"""
+    return RedirectResponse("/static/logo.svg", status_code=307)
 
 
 @app.middleware("http")
@@ -96,7 +344,7 @@ async def _no_cache_static(request, call_next):
     """静态资源强制协商缓存：改了 css/js 刷新即生效，不会被浏览器内存缓存吃掉"""
     resp = await call_next(request)
     path = request.url.path
-    if path.startswith("/static/") or path in ("/", "/guide", "/create"):
+    if path.startswith("/static/") or path in ("/", "/guide", "/create", "/login"):
         resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     return resp
 
@@ -226,6 +474,9 @@ def health():
                   or os.environ.get("SOURCE_VERSION") or "local")[:7],
         "llm_mode": llm_client.llm_label(),
         "llm_ready": llm_client.llm_available(),
+        # 前端靠它决定顶栏显示「登录 / 注册」还是「退出登录」：
+        # 本机自用没口令，公网部署有。这里只暴露「要不要口令」，不泄露口令本身。
+        "auth_required": bool(ACCESS_PASSWORD),
         "ffmpeg": media.ffmpeg_version(),
         "subtitle_filter": media.has_filter("subtitles"),
         "font": os.path.basename(config.font_path(False) or "") or "未找到",
