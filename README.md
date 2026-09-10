@@ -1,3 +1,13 @@
+---
+title: 妙课生花 WonderKourse
+emoji: 🌸
+colorFrom: purple
+colorTo: pink
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # 妙课生花 WonderKourse
 
 > **让创意开成一堂课**

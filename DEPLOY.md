@@ -82,14 +82,83 @@ docker run -d --name wonderkourse -p 80:8000 \
 
 `-v` 挂一个卷，容器重建时已生成的成片不会丢。
 
-### 方式 C：Hugging Face Spaces / Railway 等
+### 方式 C：Hugging Face Spaces（免费档最强，**推荐**）
 
-只要平台支持「用 Dockerfile 构建」就能跑，把端口对上即可。
-HF Spaces 免费档给的内存更大（适合出 1080p 长片），但容器端口要改成 `7860`：
+为什么推荐：HF Spaces 免费档给 **2 vCPU / 16 GB 内存**，
+而 Render 免费档只有 0.1 CPU / 512 MB。同一支 3 分钟 1080p 成片：
+
+| 平台 | 免费档规格 | 大致耗时 |
+|---|---|---|
+| Render | 0.1 CPU / 512MB | 约 30 分钟 |
+| **HF Spaces** | **2 vCPU / 16GB** | **约 1~2 分钟** |
+
+#### 部署步骤
+
+**1) 建 Space**（浏览器操作，约 1 分钟）
+
+打开 <https://huggingface.co/new-space>（没有账号先注册，免费）：
+
+| 填项 | 值 |
+|---|---|
+| Space name | `wonderkourse` |
+| License | 随便选（如 `mit`） |
+| Select the Space SDK | **Docker** → **Blank** |
+| Space hardware | **CPU basic · 2 vCPU · 16GB · FREE** |
+| Visibility | **Public**（免费档不支持 Private；访问控制靠下面的口令） |
+
+**2) 建一个写入用的 token**
+
+<https://huggingface.co/settings/tokens> → New token → 类型选 **Write** → 复制。
+
+**3) 把代码推上去**
+
+本仓库的 README 头部已经写好了 HF 需要的元信息（`sdk: docker` / `app_port: 8000`），
+直接把仓库推成 Space 的 git 仓库即可：
 
 ```bash
-docker run -e PORT=7860 ...
+git remote add hf https://huggingface.co/spaces/<你的用户名>/wonderkourse
+git push hf main
+# 提示输入账号密码时：用户名填 HF 用户名，密码粘贴上一步的 Write token
 ```
+
+> 想以后一次 `git push` 同时更新 GitHub 和 HF，可以配双推送：
+> ```bash
+> git remote set-url --add --push origin https://github.com/<你>/ai-micro-lecture-pro.git
+> git remote set-url --add --push origin https://huggingface.co/spaces/<你>/wonderkourse
+> ```
+
+**4) 配置两个密钥**（必须做，否则要么没大模型、要么谁都能用）
+
+Space 页面 → **Settings** → **Variables and secrets** → New secret：
+
+| Name | 值 |
+|---|---|
+| `LLM_API_KEY` | 你的 DeepSeek Key（不填也能跑，只是改用内置脚本引擎） |
+| `ACCESS_PASSWORD` | 你自己定的访问口令（建议设，否则任何人都能烧你的额度） |
+
+可选：`ACCESS_USER`（默认 `demo`）、`ALLOW_WEB_SETTINGS=0`。
+
+改完会自动重新构建，等构建完成即可访问。
+
+#### 注意事项
+
+| 事项 | 说明 |
+|---|---|
+| **访问口令** | Public Space 意味着「网址公开」，但 `ACCESS_PASSWORD` 仍然会把内容挡在门外（浏览器弹原生登录框） |
+| **会休眠** | 免费 Space 闲置约 48 小时后休眠，下次访问等约 1 分钟冷启动 |
+| **磁盘是临时的** | 重启后 `output/` 清空，成片记得及时下载 |
+| **本地文件系统** | 容器默认可能以非 root 用户运行，`Dockerfile` 里已把 `/app/output` 设为可写 |
+
+#### 如果 Space 报「应用启动失败」
+
+项目除 `/api/health` 外全部需要口令，返回 401。
+绝大多数情况平台只检查端口是否响应，不受影响；万一它要求首页返回 200，
+把 `app.py` 里 `_access_gate` 的放行条件加上 `or request.url.path == "/"` 即可。
+
+### 方式 D：Railway / 其他支持 Dockerfile 的平台
+
+只要平台支持「用 Dockerfile 构建」就能跑，把端口对上即可
+（平台注入 `PORT` 时会自动覆盖镜像里的默认值）。
 
 ---
 

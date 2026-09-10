@@ -37,12 +37,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# 云平台会注入 PORT；HOST=0.0.0.0 表示对外监听
+# 云平台会注入 PORT；HOST=0.0.0.0 表示对外监听。
+# PORT 默认 8000，与两项配置保持一致：
+#   · render.yaml 里由平台注入 PORT（覆盖此值）
+#   · Hugging Face Space 靠 README 头部的 app_port: 8000 对齐
 ENV HOST=0.0.0.0 \
     PORT=8000
 
-# 出片产物写在 output/ 里，给它一个可写目录
-RUN mkdir -p /app/output
+# 出片产物写在 output/ 里。给 777 是因为 HF Spaces 等平台可能以
+# 非 root 用户（uid 1000）启动容器，权限不够会直接报写入失败。
+RUN mkdir -p /app/output && chmod 777 /app/output
 VOLUME ["/app/output"]
 
 EXPOSE 8000
