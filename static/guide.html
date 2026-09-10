@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="妙课生花 WonderKourse 使用指南：三步做出你的第一支微课——输入主题、开始制作、预览导出。">
+<title>使用指南 · 妙课生花 WonderKourse</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg?v=1.4.0">
+<link rel="stylesheet" href="/static/css/style.css?v=2.0.0">
+</head>
+<body class="page-guide">
+
+<header class="nav">
+  <a class="brand" href="/">
+    <img class="logo" src="/static/logo.svg?v=1.4.0" alt="" width="38" height="38">
+    <span class="brand-text"><b>妙课生花</b><i>WonderKourse</i></span>
+  </a>
+  <nav class="nav-links" id="navLinks">
+    <a href="/">首页</a>
+    <a href="/#works" data-hide-sm>示例作品</a>
+    <a class="is-active" href="/guide">使用指南</a>
+    <button class="btn small primary" type="button" id="loginBtn">登录 / 注册</button>
+  </nav>
+  <button class="nav-toggle" type="button" id="navToggle"
+          aria-label="打开导航菜单" aria-expanded="false" aria-controls="navLinks">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- ============================ 标题 ============================ -->
+<section class="guide-hero">
+  <span class="section-label">Guide</span>
+  <h1>三步做出第一支微课</h1>
+  <p>不需要安装额外软件，也不需要写任何配置。会用浏览器，就会用这套系统。</p>
+</section>
+
+<!-- ============================ 三步 ============================ -->
+<section class="section" style="padding-top:0">
+  <div class="guide-steps">
+    <div class="guide-step">
+      <h3>输入主题</h3>
+      <p>在创作台右侧写下要讲的知识点（例如「翻转课堂」），
+         或者上传一份 PDF / Word / PPT / 教案作为素材。</p>
+      <div class="guide-kv">
+        <span><b>可选：</b>目标时长、画面比例、配色、插图开关</span>
+        <span><b>提示：</b>主题越具体，内容越聚焦</span>
+      </div>
+    </div>
+    <div class="guide-step">
+      <h3>点击开始制作</h3>
+      <p>点击「开始制作」，系统会依次完成文档解析、知识结构化、分镜脚本、
+         配音配乐、画面生成、剪辑合成与质检打分。</p>
+      <div class="guide-kv">
+        <span><b>全程自动：</b>右侧可实时看到每一步的执行日志</span>
+        <span><b>耗时参考：</b>3 分钟成片约需 2~3 分钟生成</span>
+      </div>
+    </div>
+    <div class="guide-step">
+      <h3>预览与导出</h3>
+      <p>成片会直接在页面里播放。可以切换字幕开关、点击分镜卡片跳转到对应画面，
+         满意后一键导出 MP4 与字幕文件。</p>
+      <div class="guide-kv">
+        <span><b>可修改：</b>对某一句旁白不满意，可单独改并只重做该镜</span>
+        <span><b>可复用：</b>历史项目随时回放、重新导出</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 能力说明 ============================ -->
+<section class="section">
+  <div class="section-head">
+    <span class="section-label">Capabilities</span>
+    <h2>你可以调整哪些东西</h2>
+    <p>默认全部自动，需要精细控制时再动这几项</p>
+  </div>
+  <div class="agent-grid">
+    <div class="agent-card">
+      <div class="ag-top"><span class="ag-name">画面比例</span></div>
+      <div class="ag-desc">横版 16:9 适合电脑、投影与 B 站；竖版 9:16 适合手机端。竖版会把横向的流程与对比改成纵向排布，并重算字幕位置。</div>
+    </div>
+    <div class="agent-card">
+      <div class="ag-top"><span class="ag-name">画面配色</span></div>
+      <div class="ag-desc">深海蓝 / 书院青 / 晨光橙三套主题，画面与插图会整体换色。</div>
+    </div>
+    <div class="agent-card">
+      <div class="ag-top"><span class="ag-name">画面配图</span></div>
+      <div class="ag-desc">每一屏都自动配一张结构化插图：引语页用聚焦徽章、要点页用索引轨道、要素页用概念图、机制页用流程链、场景页用标签云、误区页用对照板、回顾页用总览环图。也可关闭，只用纯文字版式。</div>
+    </div>
+    <div class="agent-card">
+      <div class="ag-top"><span class="ag-name">目标时长</span></div>
+      <div class="ag-desc">2 / 3 / 4 / 6 / 8 分钟。系统会据此规划分镜数量与每段旁白的长短。</div>
+    </div>
+    <div class="agent-card">
+      <div class="ag-top"><span class="ag-name">面向对象</span></div>
+      <div class="ag-desc">本科生 / 高职学生 / 教师培训……填写后会体现在讲述语气与内容深度上。</div>
+    </div>
+    <div class="agent-card">
+      <div class="ag-top"><span class="ag-name">背景音乐</span></div>
+      <div class="ag-desc">舒缓 / 明快 / 温暖三种自动合成的配乐，音量已压到不干扰人声。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 大模型配置 ============================ -->
+<section class="section" id="config">
+  <div class="section-head">
+    <span class="section-label">Optional</span>
+    <h2>可选：接入大模型</h2>
+    <p>不配置也能完整使用</p>
+  </div>
+  <div class="guide-steps" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+    <div class="guide-step">
+      <h3>默认：内置脚本引擎</h3>
+      <p>系统内置学科知识骨架与教学叙事骨架，并可从上传文档中提炼要点。
+         不联网、不需要任何 Key，也能产出完整可用的微课。</p>
+      <div class="guide-kv"><span><b>页面显示：</b>内置教学脚本引擎</span></div>
+    </div>
+    <div class="guide-step">
+      <h3>进阶：接入大模型</h3>
+      <p>在创作台右上角点击「⚙ 大模型设置」，填入 API Key 即可。
+         配置只写入本机项目目录下的 <code>.env</code>，不会上传到任何服务器。</p>
+      <div class="guide-kv">
+        <span><b>支持：</b>DeepSeek / 通义千问 / 智谱 GLM / Kimi / 本地 Ollama</span>
+        <span><b>效果：</b>知识要点与旁白稿由大模型生成，内容更丰富</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 常见问题 ============================ -->
+<section class="section" id="faq">
+  <div class="section-head">
+    <span class="section-label">FAQ</span>
+    <h2>常见问题</h2>
+  </div>
+  <div class="faq">
+    <details class="faq-item" open>
+      <summary>生成一支微课需要多久？</summary>
+      <p>本机实测：3 分钟成片约需 2~3 分钟生成（含配音、画面与合成）。
+         主要耗时在语音合成与视频编码，不需要人工等待操作。</p>
+    </details>
+    <details class="faq-item">
+      <summary>没有网络能用吗？</summary>
+      <p>可以。语音合成会优先使用在线引擎（音质最佳），断网时自动降级到系统内置语音；
+         插图、画面、剪辑全部在本机完成，不依赖网络。</p>
+    </details>
+    <details class="faq-item">
+      <summary>对生成的内容不满意怎么办？</summary>
+      <p>成片预览后，点击分镜卡片上的 ✎ 可以修改任意一镜的旁白稿，
+         也可以整体更换配色。系统只重做受影响的那一步，其余内容复用，因此很快。</p>
+    </details>
+    <details class="faq-item">
+      <summary>画面里的插图是怎么来的？</summary>
+      <p>插图由本机程序化绘制，共有八类：概念结构图、流程链、标签云、对照板、
+         索引轨道、总览环图、聚焦徽章与抽象主视觉。系统会按分镜语义自动选型，
+         做到「每一屏都有图」，且图形里的文字全部来自你自己的脚本要点。</p>
+         图中文字全部取自你自己的脚本要点，因此不会出现文字错误或凭空编造的内容。</p>
+    </details>
+    <details class="faq-item">
+      <summary>可以做成手机上刷的竖版视频吗？</summary>
+      <p>可以。在「画面比例」里选择竖版 9:16 即可。系统会重新排布版式并调整字幕位置，
+         不是简单地把横版裁掉两侧。</p>
+    </details>
+    <details class="faq-item">
+      <summary>生成的视频可以商用或公开吗？</summary>
+      <p>画面、插图与背景音乐均为本机程序化生成，不含第三方素材；
+         配音使用系统或在线语音合成服务，请按相应服务条款使用。
+         建议在正式发布前通读一遍旁白内容，确保表述准确。</p>
+    </details>
+  </div>
+</section>
+
+<div class="cta-band">
+  <div class="inner">
+    <h2>准备好了吗？</h2>
+    <p>输入一个知识点，两分钟后拿到成片</p>
+    <a class="btn primary big" href="/create" style="max-width:280px;margin:0 auto">进入创作台 →</a>
+  </div>
+</div>
+
+<!-- TODO: 把下面的邮箱 / 电话换成贵校或本单位真实联系方式 -->
+<footer class="site-foot">
+  <div class="foot-inner">
+    <div class="foot-brand">
+      <a class="brand" href="/">
+        <img class="logo" src="/static/logo.svg?v=1.4.0" alt="" width="38" height="38">
+        <span class="brand-text"><b>妙课生花</b><i>WonderKourse</i></span>
+      </a>
+      <p>让创意开成一堂课。输入主题或文档，自动完成脚本、配音、画面、字幕与剪辑，直接产出可用的成片。</p>
+    </div>
+    <div class="foot-col">
+      <h5>产品</h5>
+      <ul>
+        <li><a href="/#works">示例作品</a></li>
+        <li><a href="/#how">工作流程</a></li>
+        <li><a href="/create">创作台</a></li>
+      </ul>
+    </div>
+    <div class="foot-col">
+      <h5>支持</h5>
+      <ul>
+        <li><a href="/guide">使用指南</a></li>
+        <li><a href="/guide#faq">常见问题</a></li>
+        <li><a href="/guide#config">大模型配置</a></li>
+      </ul>
+    </div>
+    <div class="foot-col">
+      <h5>联系</h5>
+      <ul>
+        <li><a href="mailto:junjiel10@student.must.edu.mo">junjiel10@student.must.edu.mo</a></li>
+        <li>乐一 AI教研实验室</li>
+        <li>工作日 8:30–17:30</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>© 2026 <strong>乐一 AI教研实验室</strong> · 保留所有权利</span>
+  </div>
+</footer>
+
+<script src="/static/js/ui.js?v=2.0.1"></script>
+</body>
+</html>

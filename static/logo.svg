@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="妙课生花 WonderKourse">
+  <title>妙课生花 WonderKourse</title>
+  <desc>一朵五瓣花，花心是一枚播放键</desc>
+
+  <defs>
+    <!-- userSpaceOnUse：让花瓣、花心、播放键共享同一段渐变，挖空处才能严丝合缝 -->
+    <linearGradient id="wk" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9b73f7" />
+      <stop offset="0.55" stop-color="#b26cf0" />
+      <stop offset="1" stop-color="#f266a2" />
+    </linearGradient>
+  </defs>
+
+  <!-- 应用图标底：圆角方，紫→粉渐变 -->
+  <rect width="64" height="64" rx="16" fill="url(#wk)" />
+
+  <!-- 五瓣花：白色花瓣绕中心均分 72° -->
+  <g fill="#ffffff">
+    <ellipse cx="32" cy="18.5" rx="8" ry="10.4" />
+    <ellipse cx="32" cy="18.5" rx="8" ry="10.4" transform="rotate(72 32 32)" />
+    <ellipse cx="32" cy="18.5" rx="8" ry="10.4" transform="rotate(144 32 32)" />
+    <ellipse cx="32" cy="18.5" rx="8" ry="10.4" transform="rotate(216 32 32)" />
+    <ellipse cx="32" cy="18.5" rx="8" ry="10.4" transform="rotate(288 32 32)" />
+  </g>
+
+  <!-- 花心：同色系圆盘，作为播放键的承托 -->
+  <circle cx="32" cy="32" r="10.6" fill="url(#wk)" />
+
+  <!-- 花心中央的播放键 -->
+  <path d="M29.4 26.1 L39.3 32 L29.4 37.9 Z"
+        fill="#ffffff" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round" />
+</svg>

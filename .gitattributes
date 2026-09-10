@@ -1,0 +1,21 @@
+# 换行符统一：避免 Windows 上提交、Linux/容器里跑起来出错
+# 尤其是 Dockerfile 里 COPY 进来的 .sh，必须是 LF，否则容器里会报
+# "no such file or directory"（其实是 \r 作祟）。
+
+* text=auto
+
+# 这些必须保持 LF
+*.sh    text eol=lf
+Dockerfile text eol=lf
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# 这些保持 Windows 风格（给 windows 用户双击用）
+*.bat   text eol=crlf
+
+# 二进制文件不做换行转换
+*.png   binary
+*.jpg   binary
+*.mp4   binary
+*.svg   text

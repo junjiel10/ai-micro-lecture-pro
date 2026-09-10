@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="妙课生花 WonderKourse：输入一个知识主题或上传文档，自动完成脚本、配音、画面、字幕、剪辑与导出，产出可直接使用的微课视频。">
+<title>妙课生花 WonderKourse · 让创意开成一堂课</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg?v=1.4.0">
+<link rel="stylesheet" href="/static/css/style.css?v=2.0.0">
+<script>
+  /* 入场动画总开关：先打标记，CSS 才会把内容藏起来再淡入（避免闪烁）。
+     万一主脚本 3 秒内没能接管（加载失败 / 被拦截），自动撤掉标记，
+     内容回到「默认可见」，绝不会卡在隐形状态。 */
+  (function () {
+    var root = document.documentElement;
+    root.classList.add("js-motion");
+    setTimeout(function () {
+      if (!root.classList.contains("motion-on")) root.classList.remove("js-motion");
+    }, 3000);
+  })();
+</script>
+</head>
+<body class="page-home">
+
+<!-- ============================ 顶栏 ============================ -->
+<header class="nav">
+  <a class="brand" href="/">
+    <img class="logo" src="/static/logo.svg?v=1.4.0" alt="" width="38" height="38">
+    <span class="brand-text"><b>妙课生花</b><i>WonderKourse</i></span>
+  </a>
+  <nav class="nav-links" id="navLinks">
+    <a href="#works">示例作品</a>
+    <a href="#how">工作流程</a>
+    <a href="#modes" data-hide-sm>创作模式</a>
+    <a href="/guide">使用指南</a>
+    <button class="btn small primary" type="button" id="loginBtn">登录 / 注册</button>
+  </nav>
+  <button class="nav-toggle" type="button" id="navToggle"
+          aria-label="打开导航菜单" aria-expanded="false" aria-controls="navLinks">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- ============================ 首屏 ============================ -->
+<section class="hero">
+  <h1>让创意，<em>开成一堂课</em></h1>
+  <p class="hero-sub">
+    输入知识主题或上传文档，系统自动完成脚本、大纲、分镜、配音、画面、字幕与剪辑，<span class="hs-b">直接产出可用的 MP4。你只需要写一句话。</span>
+  </p>
+
+  <form class="hero-input" onsubmit="return quickStart(event)">
+    <input id="quickTopic" type="text" list="presets"
+           placeholder="例如：翻转课堂 · 布鲁姆教育目标分类学 · 生成式AI如何赋能教学设计"
+           aria-label="知识主题">
+    <datalist id="presets"></datalist>
+    <button class="btn primary" type="submit">开始制作 →</button>
+  </form>
+  <div class="hero-chips" id="heroChips"></div>
+
+  <div class="hero-feats">
+    <span>🎬 横版 16:9 / 竖版 9:16</span>
+    <span>🧩 每一屏都自动配图</span>
+    <span>🧠 可选大模型生成脚本</span>
+    <span>✅ 质检不合格自动重做</span>
+    <span>🔌 零外部软件依赖</span>
+  </div>
+</section>
+
+<!-- ============================ 示例作品 ============================ -->
+<section class="section reveal" id="works">
+  <div class="section-head">
+    <span class="section-label">Examples</span>
+    <h2>示例作品</h2>
+    <p>点击卡片即可在线播放 —— 全部由本系统自动生成，未经剪辑</p>
+  </div>
+  <div class="works-grid" id="worksGrid">
+    <div class="empty">暂无作品，进入创作台生成第一支微课。</div>
+  </div>
+</section>
+
+<!-- ============================ 它是怎么工作的 ============================ -->
+<section class="section reveal" id="how">
+  <div class="section-head">
+    <span class="section-label">How it works</span>
+    <h2>它是怎么工作的</h2>
+    <p>七个步骤一气呵成，每一步都有产出、可检查</p>
+  </div>
+
+  <div class="howto">
+    <div class="howto-step">
+      <div class="howto-num">1</div>
+      <h4>文档解析</h4>
+      <p>读取 PDF / Word / PPT / 教案，提取正文与结构</p>
+    </div>
+    <div class="howto-step">
+      <div class="howto-num">2</div>
+      <h4>知识结构化</h4>
+      <p>定大纲、拆知识要点、规划时长与节奏</p>
+    </div>
+    <div class="howto-step">
+      <div class="howto-num">3</div>
+      <h4>分镜脚本</h4>
+      <p>拆成 8~12 个分镜，逐镜撰写口语化旁白稿</p>
+    </div>
+    <div class="howto-step">
+      <div class="howto-num">4</div>
+      <h4>配音配乐</h4>
+      <p>逐镜语音合成，生成字幕时间轴与背景音乐</p>
+    </div>
+    <div class="howto-step">
+      <div class="howto-num">5</div>
+      <h4>画面生成</h4>
+      <p>渲染 1080P 教学幻灯片，每一屏都自动配一张结构化插图</p>
+    </div>
+    <div class="howto-step">
+      <div class="howto-num">6</div>
+      <h4>剪辑合成</h4>
+      <p>画面 + 配音 + 音乐 + 字幕合成为成片</p>
+    </div>
+    <div class="howto-step">
+      <div class="howto-num">7</div>
+      <h4>质检打分</h4>
+      <p>8 项自动检查，不合格的环节自动回退重做</p>
+    </div>
+  </div>
+
+  <p class="howto-note">
+    🖐 全程人工零干预。只想改一处也没问题 —— 预览后可单独修改某一镜的文案或整支配色，
+    系统<b>只重做受影响的那一步</b>，其余复用。
+  </p>
+</section>
+
+<!-- ============================ 创作模式 ============================ -->
+<section class="section reveal" id="modes">
+  <div class="section-head">
+    <span class="section-label">Modes</span>
+    <h2>两种创作模式</h2>
+    <p>选一种，输入提示词，剩下的交给系统</p>
+  </div>
+  <div class="mode-grid">
+    <a class="mode-card" href="/create?mode=topic">
+      <div class="mode-icon">💡</div>
+      <h3>主题驱动模式</h3>
+      <p>只给一个知识主题，系统自动完成知识结构化、撰写旁白稿、规划分镜与画面版式。</p>
+      <ul>
+        <li>适合概念讲解、原理科普、教学微课</li>
+        <li>内置学科知识骨架，无需任何 API Key</li>
+        <li>自动排布 8~12 个分镜，成片约 3~5 分钟</li>
+      </ul>
+      <span class="mode-go">进入创作台 →</span>
+    </a>
+    <a class="mode-card" href="/create?mode=doc">
+      <div class="mode-icon">📄</div>
+      <h3>文档精讲模式</h3>
+      <p>上传 PDF / Word / PPT / 教案，系统提炼要点并按教学逻辑重组为讲解视频。</p>
+      <ul>
+        <li>把现成教案、论文、课件快速变成微课</li>
+        <li>旁白直接依据文档要点，减少二次录入</li>
+        <li>自动识别关键词与关键句，并标注来源</li>
+      </ul>
+      <span class="mode-go">上传文档 →</span>
+    </a>
+  </div>
+</section>
+
+<!-- ============================ 行动号召 ============================ -->
+<div class="cta-band reveal">
+  <div class="inner">
+    <h2>准备好做第一支微课了吗？</h2>
+    <p>无需安装任何额外软件，输入一个知识点就能开始</p>
+    <a class="btn primary big" href="/create" style="max-width:280px;margin:0 auto">进入创作台 →</a>
+  </div>
+</div>
+
+<!-- ============================ 页脚 ============================ -->
+<!-- TODO: 把下面的邮箱 / 电话换成贵校或本单位真实联系方式 -->
+<footer class="site-foot">
+  <div class="foot-inner">
+    <div class="foot-brand">
+      <a class="brand" href="/">
+        <img class="logo" src="/static/logo.svg?v=1.4.0" alt="" width="38" height="38">
+        <span class="brand-text"><b>妙课生花</b><i>WonderKourse</i></span>
+      </a>
+      <p>让创意开成一堂课。输入主题或文档，自动完成脚本、配音、画面、字幕与剪辑，直接产出可用的成片。</p>
+    </div>
+    <div class="foot-col">
+      <h5>产品</h5>
+      <ul>
+        <li><a href="#works">示例作品</a></li>
+        <li><a href="#how">工作流程</a></li>
+        <li><a href="#modes">创作模式</a></li>
+        <li><a href="/create">创作台</a></li>
+      </ul>
+    </div>
+    <div class="foot-col">
+      <h5>支持</h5>
+      <ul>
+        <li><a href="/guide">使用指南</a></li>
+        <li><a href="/guide#faq">常见问题</a></li>
+        <li><a href="/guide#config">大模型配置</a></li>
+        <li><a href="/api/health">运行状态</a></li>
+      </ul>
+    </div>
+    <div class="foot-col">
+      <h5>联系</h5>
+      <ul>
+        <li><a href="mailto:junjiel10@student.must.edu.mo">junjiel10@student.must.edu.mo</a></li>
+        <li>乐一 AI教研实验室</li>
+        <li>工作日 8:30–17:30</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>© 2026 <strong>乐一 AI教研实验室</strong> · 保留所有权利</span>
+    <span id="footEnv"></span>
+  </div>
+</footer>
+
+<!-- ============================ 播放弹窗 ============================ -->
+<div class="player-mask" id="playerMask" onclick="if(event.target===this)closePlayer()">
+  <div class="player-shell" id="playerShell">
+    <video id="playerVideo" controls playsinline preload="metadata"></video>
+    <div class="player-bar">
+      <span class="title" id="playerTitle">示例作品</span>
+      <span id="playerMeta"></span>
+      <span class="spacer"></span>
+      <button class="tool-btn" id="playerSubBtn" onclick="togglePlayerSubs()">字幕：开</button>
+      <button class="tool-btn" id="playerDlBtn" onclick="downloadPlayer()">下载 MP4</button>
+      <button class="tool-btn" onclick="closePlayer()">关闭 ✕</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/ui.js?v=2.0.1"></script>
+<script src="/static/js/index.js?v=2.0.0"></script>
+</body>
+</html>

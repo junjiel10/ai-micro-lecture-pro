@@ -1,0 +1,20 @@
+# 本机私密配置：里面有你的 API Key，绝对不要提交或打包给别人
+.env
+
+# 虚拟环境
+.venv/
+venv/
+
+# 每次生成的产物（体积大，且含你的主题内容）
+output/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

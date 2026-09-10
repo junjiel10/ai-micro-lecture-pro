@@ -1,0 +1,43 @@
+# 妙课生花 WonderKourse · Render 一键部署配置
+#
+# 用法：把这个仓库推到 GitHub 后，在 Render 里选
+#   New → Blueprint → 选这个仓库
+# Render 会照着本文件建服务，并在需要你填的地方弹输入框。
+#
+# 注意 plan: free 是 512MB 内存：
+#   生成 2~3 分钟的 1080p 成片通常够用；选 8 分钟 + 横版时可能内存不足重启。
+#   真遇到 OOM，把 plan 改成 starter（约 $7/月）即可。
+services:
+  - type: web
+    name: wonderkourse
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # 云平台会自动注入 PORT，这里不用写
+      - key: HOST
+        value: 0.0.0.0
+
+      # ---- 大模型（可选；不填则用内置教学脚本引擎）----
+      # 这几个 sync: false 表示「不要在仓库里写值」，部署时由你在面板上填，
+      # 这样 Key 只存在平台的环境变量里，不会进 Git 历史。
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://api.deepseek.com/v1
+      - key: LLM_MODEL
+        value: deepseek-chat
+
+      # ---- 访问口令（强烈建议保留）----
+      # 不设的话，任何人拿到你的网址都能点「开始制作」，
+      # 烧掉你服务器 CPU 和 DeepSeek 额度。
+      - key: ACCESS_USER
+        value: demo
+      - key: ACCESS_PASSWORD
+        sync: false
+
+      # 线上禁止用网页端「⚙ 大模型设置」改服务器配置
+      - key: ALLOW_WEB_SETTINGS
+        value: "0"

@@ -1,0 +1,15 @@
+# 构建镜像时排除的东西 —— 它们只在开发机上需要
+.venv/
+venv/
+output/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.git/
+.gitignore
+.env
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.md.bak

@@ -1,0 +1,30 @@
+# 妙课生花 WonderKourse · 依赖
+#
+# 安装：pip install -r requirements.txt
+#
+# 说明：本项目刻意做到「零外部软件安装」——
+#   · 画面用 Pillow 直接渲染，不需要 LibreOffice / PowerPoint
+#   · 视频合成用 imageio-ffmpeg 自带的 ffmpeg 二进制，不需要单独装 FFmpeg
+
+# --- Web 服务 ---
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+
+# --- 语音合成（在线，音质最佳；失败时自动降级到 Windows 内置语音）---
+edge-tts>=6.1
+
+# --- 画面渲染 ---
+pillow>=10.0
+numpy>=1.24
+
+# --- 音频时长探测 ---
+mutagen>=1.47
+
+# --- 视频合成（自带 ffmpeg 二进制，pip 安装即可，无需管理员权限）---
+imageio-ffmpeg>=0.4.9
+
+# --- 文档解析 ---
+python-docx>=1.1.0        # Word
+python-pptx>=0.6.23       # PowerPoint
+pdfplumber>=0.11          # PDF
