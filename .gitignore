@@ -18,3 +18,7 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+
+# 穿透工具（cloudflared 约 52MB 二进制，本机用，不进仓库）
+# 需要时运行 tools\get-cloudflared.bat 自动下载
+tools/bin/
