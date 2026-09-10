@@ -168,12 +168,12 @@ Space 页面 → **Settings** → **Variables and secrets** → New secret：
 本机出一支 3 分钟成片只要**约 70 秒**（比 Render 免费档快约 25 倍），
 所以「本机跑 + 穿透一个公网地址」是演示场景里最划算的方案。
 
-仓库里已备好两个双击即用的脚本：
+仓库里已备好双击即用的脚本（**不需要下载任何东西**，用的是 Windows 自带的 `ssh`）：
 
 | 脚本 | 作用 |
 |---|---|
-| `tools\get-cloudflared.bat` | 下载穿透工具（约 52MB，只需一次） |
 | `start-public.bat` | 一键分享：提示输入口令 → 启服务 → 建隧道 → 打印网址 |
+| `tools\get-cloudflared.bat` | 可选备用：换成 cloudflared 隧道（要下 52MB，国内可能很慢） |
 
 手工做法也可以（等价于脚本里干的事）：
 
@@ -181,18 +181,29 @@ Space 页面 → **Settings** → **Variables and secrets** → New secret：
 # 终端 1：启动服务（注意这两个环境变量，见下方警告）
 $env:ALLOW_WEB_SETTINGS='0'
 $env:ACCESS_PASSWORD='自己定的口令'
-.\.venv\Scripts\python.exe app.py
+.\venv\Scripts\python.exe app.py
 
-# 终端 2：建立隧道
-tools\bin\cloudflared.exe tunnel --url http://127.0.0.1:8000
+# 终端 2：建立隧道（localhost.run 免费匿名隧道，无需注册）
+ssh -o StrictHostKeyChecking=accept-new -R 80:127.0.0.1:8000 nokey@localhost.run
 ```
 
-拿到形如 `https://xxxx.trycloudflare.com` 的地址就能分享出去。
+拿到形如 `https://xxxx.lhr.life` 的地址就能分享出去
+（用户名固定 `demo`，密码是自己设的口令）。
+
+> **两个坑，踩过了所以写在这：**
+>
+> 1. **转发目标写 `127.0.0.1`，别写 `localhost`。**
+>    Windows 上 `localhost` 会优先解析成 IPv6 的 `::1`，而程序只监听 IPv4，
+>    结果隧道建起来了但请求转不进去，访问报 `Empty reply from server`。
+> 2. **免费隧道的地址会变。** 匿名用户拿到的是随机域名，重连 / 重启脚本后
+>    可能换成另一个地址（旧地址立刻失效）。地址变了就重新运行脚本。
+>    对地址稳定性有要求时，登录 localhost.run 绑定 SSH 公钥可拿到相对固定的域名，
+>    或改用 cloudflared。
 
 | | 说明 |
 |---|---|
 | 优点 | 零成本、速度最快（用你本机的 CPU 与内存） |
-| 缺点 | **电脑必须开着**，休眠 / 关机链接就失效 |
+| 缺点 | **电脑必须开着**，休眠 / 关机链接就失效；网址每次重启会换 |
 | 适合 | 课堂演示、答辩、临时给几个人试用 |
 
 > ### ⚠️ 走隧道必须关掉「网页端改配置」
@@ -208,11 +219,6 @@ tools\bin\cloudflared.exe tunnel --url http://127.0.0.1:8000
 >
 > 顺带解释一个常见疑问：Render 上那个设置面板点不动，是因为那边监听的是
 > `0.0.0.0`，程序判断「这是公网环境」自动禁用了——**那是设计如此，不是坏了**。
-
-### 方式 E：Railway / 其他支持 Dockerfile 的平台
-
-只要平台支持「用 Dockerfile 构建」就能跑，把端口对上即可
-（平台注入 `PORT` 时会自动覆盖镜像里的默认值）。
 
 ### 方式 E：Railway / 其他支持 Dockerfile 的平台
 

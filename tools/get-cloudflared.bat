@@ -10,6 +10,10 @@ echo.
 echo   用途：把本机运行的服务通过一条隧道暴露到公网，
 echo         别人就能用 https://xxx.trycloudflare.com 访问。
 echo.
+echo   [可选的备用方案] start-public.bat 默认用 Windows 自带的 ssh，
+echo   不需要本脚本。只有在 ssh 方案不能用、或你想换个更稳的隧道时，
+echo   才需要跑这个（因为国内下 GitHub 大文件经常很慢）。
+echo.
 echo   来源：github.com/cloudflare/cloudflared 官方发布页
 echo   体积：约 52 MB，只需下载一次
 echo.
@@ -23,7 +27,7 @@ if exist "tools\bin\cloudflared.exe" (
 )
 
 echo.
-echo 正在查询最新版本并下载，请稍候（视网速 1~10 分钟）...
+echo 正在查询最新版本并下载，请稍候（国内网速可能 10 分钟以上）...
 echo.
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
@@ -34,7 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "  if (-not $a) { throw '在最新发布里没找到 windows-amd64 版' }" ^
   "  Write-Host ('  版本 ' + $r.tag_name + '，' + [math]::Round($a.size/1MB,1) + ' MB');" ^
   "  $ProgressPreference='SilentlyContinue';" ^
-  "  Invoke-WebRequest $a.browser_download_url -OutFile 'tools\bin\cloudflared.exe' -TimeoutSec 900;" ^
+  "  Invoke-WebRequest $a.browser_download_url -OutFile 'tools\bin\cloudflared.exe' -TimeoutSec 3600;" ^
   "} catch { Write-Host ('[错误] ' + $_.Exception.Message) -ForegroundColor Red; exit 1 }"
 
 if errorlevel 1 (
