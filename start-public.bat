@@ -66,37 +66,76 @@ echo.
 echo ------------------------------------------------------------
 echo   第 2 步：启动服务
 echo ------------------------------------------------------------
+rem 刻意用一个独立端口（8010）而不是默认的 8000。
+rem 8000 很可能是你自己那个「本机自用」实例在用 —— 那边没有口令。
+rem 一旦撞上，本脚本的服务会启动失败，而隧道却会把你那个
+rem 没口令的实例暴露到公网上去。用独立端口就没这个隐患。
+set HOST=127.0.0.1
+set PORT=8010
+
+netstat -ano | findstr /r /c:":8010 .*LISTENING" >nul 2>nul
+if not errorlevel 1 (
+    echo   [!] 端口 8010 已被占用，可能是上次的分享没退干净。
+    echo       双击 stop-public.bat 清一下，或者重启电脑后再试。
+    echo.
+    pause
+    exit /b 1
+)
+
 start "wk-server" /min cmd /c ".venv\Scripts\python.exe app.py"
-timeout /t 5 /nobreak >nul
-echo   服务已启动（127.0.0.1:8000）
+
+rem 等服务真的就绪（最多 20 秒），而不是死等 5 秒
+set READY=
+set /a TRIES=0
+:waitup
+set /a TRIES+=1
+curl.exe -s -o NUL --max-time 2 "http://127.0.0.1:8010/api/health"
+if not errorlevel 1 set READY=1
+if defined READY goto up
+if %TRIES% geq 20 goto upfail
+timeout /t 1 /nobreak >nul
+goto waitup
+
+:upfail
+echo.
+echo   [!] 服务没起来。看一下那个最小化的 wk-server 窗口里报了什么错。
+echo.
+pause
+exit /b 1
+
+:up
+echo   服务已就绪（127.0.0.1:8010）。
 
 echo.
 echo ------------------------------------------------------------
-echo   第 3 步：建立隧道
+echo   第 3 步：建立隧道（自带保活与断线重连）
 echo ------------------------------------------------------------
-echo   下面会打印一行 https://xxxx.lhr.life —— 那就是分享网址。
-echo   对方打开不用口令就能看完整站；只有点「开始制作」时才弹框要口令。
+echo   下面会大字打印分享网址。
 echo.
-echo   本窗口关闭 = 停止分享（服务窗口会自动一起关掉）
+echo   两个关键点，解释一下为什么值得等：
+echo     · 免费匿名隧道有「闲置超时」—— 一段时间没流量经过就会被
+
+echo       服务端掉断（实测就是这样掉的），所以脚本每 60 秒探一次活。
+echo     · 真断了会自动重连，但重连后网址会变，以新打印的为准。
+echo.
+echo   本窗口关掉 = 停止分享。
 echo ============================================================
 echo.
 
-rem 目标是显式写 127.0.0.1 而不是 localhost：
-rem Windows 上 localhost 会优先解析成 IPv6 的 ::1，而服务只监听 IPv4，
-rem 隧道建起来了请求却转不进去（表现为 Empty reply from server）
-rem
-rem 想换成 cloudflared（地址同样是随机但更稳）的话，先跑
-rem tools\get-cloudflared.bat 下载，再把下面这行换成：
-rem    "tools\bin\cloudflared.exe" tunnel --url http://127.0.0.1:8000
-ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=20 ^
-    -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes ^
-    -R 80:127.0.0.1:8000 nokey@localhost.run
+if not exist "tools\tunnel.ps1" (
+    echo   [!] 没找到 tools\tunnel.ps1，无法建隧道。
+    pause
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "tools\tunnel.ps1" -Port 8010
 
 echo.
 echo 隧道已停止，正在关掉后台服务...
 rem 窗口标题特意用 ASCII：中文标题在 GBK/UTF-8 两种代码页下
-rem 匹配结果不一样，taskkill 可能杀不掉，留个孤儿进程占着 8000 端口
+rem 匹配结果不一样，taskkill 可能杀不掉，留个孤儿进程占着端口
 taskkill /FI "WINDOWTITLE eq wk-server*" /T /F >nul 2>nul
+rem 兜底：万一窗口标题没匹配上，直接按端口找进程
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":8010 .*LISTENING"') do taskkill /PID %%p /T /F >nul 2>nul
 echo 完成。
 pause
 endlocal
