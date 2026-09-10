@@ -548,7 +548,9 @@ async function loadProjects() {
     (d.items || []).forEach((p) => {
       const li = document.createElement("li");
       li.className = p.id === state.projectId ? "active" : "";
-      li.innerHTML = `<span class="pt">${esc(p.title)}</span>
+      li.innerHTML = `<button class="pdel" type="button" title="删除这个项目"
+          aria-label="删除 ${esc(p.title)}">✕</button>
+        <span class="pt">${esc(p.title)}</span>
         <span class="pm">${p.created} · ${p.shots} 镜 · ${fmtDur(p.duration)}
         ${p.score != null ? " · 质检 " + p.score : ""}</span>`;
       li.onclick = () => {
@@ -564,12 +566,42 @@ async function loadProjects() {
         document.querySelectorAll(".project-list li").forEach((x) => x.classList.remove("active"));
         li.classList.add("active");
       };
+      // 删除按钮：必须先 stopPropagation，否则会连带触发 li 的「打开项目」
+      li.querySelector(".pdel").onclick = (ev) => {
+        ev.stopPropagation();
+        deleteProject(p.id, p.title);
+      };
       ul.appendChild(li);
     });
     if (!(d.items || []).length) {
       ul.innerHTML = '<div class="empty" style="padding:16px 0">暂无历史项目</div>';
     }
   } catch (e) { /* 忽略 */ }
+}
+
+/* 删除一个历史项目。
+   删的是 output/<项目号>/ 整个目录，所以首页「示例作品」也会同步消失
+   （那个页面读同一个 /api/projects 接口）。 */
+async function deleteProject(pid, title) {
+  const ok = window.confirm(
+    `确定删除「${title}」吗？\n\n` +
+    `画面、配音、字幕与成片会一起删掉，且无法恢复。`);
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/projects/${encodeURIComponent(pid)}`, { method: "DELETE" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `服务端返回 ${r.status}`);
+    appendLog("info", `已删除项目「${title}」`);
+    // 删掉的恰好是正在预览的那个：把预览区一并清空
+    if (state.projectId === pid) {
+      state.projectId = null;
+      state.detail = null;
+      hideResult();
+    }
+    await loadProjects();
+  } catch (e) {
+    appendLog("warning", "删除失败：" + e.message);
+  }
 }
 
 function openProject(pid) {

@@ -148,6 +148,15 @@ function initReveal() {
 
 /* ==================== 启动 ==================== */
 // 顶栏的「登录 / 注册」与窄屏折叠菜单由 ui.js 统一接管（index / guide 共用）
+
+// 在创作台删掉某个项目后切回首页，作品列表要跟着更新，
+// 否则会看到一张点开已经没有数据的卡片
+if ("visibilityState" in document) {
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) loadWorks();
+  });
+}
+
 loadHealth();
 loadWorks();
 initReveal();

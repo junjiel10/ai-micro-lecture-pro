@@ -393,13 +393,32 @@ def list_projects():
 
 @app.delete("/api/projects/{pid}")
 def delete_project(pid: str):
-    pdir = os.path.join(OUTPUT_DIR, os.path.basename(pid))
+    """删除一个历史项目（连 output/<项目号>/ 整个目录一起删）。
+
+    首页「示例作品」读的是同一个 /api/projects 接口，
+    所以这里删掉之后，首页刷新（或切回标签页）就自然同步消失了。
+    """
+    name = os.path.basename(pid or "").strip()
+    # 两道防线（原来都没有，都是真问题）：
+    #   1) 下划线开头的是内部目录 —— output/_uploads 存的是上传的原始文档，
+    #      它也是个目录，不拦的话会被当成项目整个删掉
+    #   2) 正在生成的项目不能删，否则后台线程会往一个已消失的目录里继续写
+    if not name or name.startswith("_"):
+        return JSONResponse({"error": "该项目不可删除"}, status_code=400)
+    pdir = os.path.join(OUTPUT_DIR, name)
     if not os.path.isdir(pdir):
         return JSONResponse({"error": "项目不存在"}, status_code=404)
-    shutil.rmtree(pdir, ignore_errors=True)
+    t = _task(name)
+    if t and t.get("status") == "running":
+        return JSONResponse({"error": "该项目正在生成中，请等它完成或先取消再删"},
+                            status_code=409)
+    try:
+        shutil.rmtree(pdir)          # 不用 ignore_errors：删不掉要如实报错
+    except OSError as e:
+        return JSONResponse({"error": f"删除失败：{e}"}, status_code=500)
     with LOCK:
-        TASKS.pop(pid, None)
-    return {"ok": True}
+        TASKS.pop(name, None)
+    return {"ok": True, "id": name}
 
 
 # ======================================================================

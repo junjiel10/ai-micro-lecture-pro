@@ -664,6 +664,7 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 /* 历史项目 */
 .project-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
 .project-list li {
+  position: relative;                    /* 删除按钮绝对定位的基准 */
   padding: var(--sp-3); border-radius: var(--r-md); cursor: pointer;
   border: 1px solid var(--line); background: var(--surface);
   transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
@@ -671,8 +672,22 @@ textarea { resize: vertical; line-height: var(--lh-snug); }
 .project-list li:hover { border-color: var(--brand-300); background: var(--brand-soft); transform: translateX(2px); }
 .project-list li:active { transform: translateX(1px) scale(0.995); }
 .project-list li.active { border-color: var(--accent); background: var(--brand-tint); }
-.project-list .pt { display: block; font-size: var(--fs-body); line-height: var(--lh-snug); margin-bottom: var(--sp-1); }
+/* 删除按钮：平时半隐，悬停时变红。右边留出空间，别盖住标题文字 */
+.project-list .pt { display: block; font-size: var(--fs-body); line-height: var(--lh-snug); margin-bottom: var(--sp-1); padding-right: var(--sp-6); }
 .project-list .pm { display: block; font-size: var(--fs-caption); color: var(--text-faint); }
+.project-list .pdel {
+  position: absolute; top: var(--sp-2); right: var(--sp-2);
+  width: 22px; height: 22px; padding: 0; border: none; border-radius: var(--r-xs);
+  background: transparent; color: var(--text-faint); cursor: pointer;
+  font-size: var(--fs-sm); line-height: 1; font-family: inherit;
+  opacity: 0; transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.project-list li:hover .pdel,
+.project-list .pdel:focus-visible { opacity: 1; }
+.project-list .pdel:hover { background: var(--danger-soft); color: var(--danger); }
+.project-list .pdel:active { transform: scale(0.92); }
+/* 触屏设备没有悬停，直接常显 */
+@media (hover: none) { .project-list .pdel { opacity: 1; } }
 .sidebar-hint { color: var(--text-faint); font-size: var(--fs-sm); line-height: var(--lh-loose); margin-top: var(--sp-5); }
 
 /* 工具栏 */
