@@ -540,7 +540,15 @@ class EditAgent:
         os.makedirs(clips_dir, exist_ok=True)
         clips, total = [], 0.0
 
-        log("思考", f"逐分镜合成镜头：画面定格 + 配音轨，共 {len(images)} 段")
+        # 编码参数（含线程数限制，见 config.ffmpeg_threads 的注释）
+        enc = ["-c:v", config.VIDEO_CODEC, "-tune", "stillimage",
+               "-crf", config.CRF, "-preset", config.PRESET]
+        th = config.ffmpeg_threads()
+        if th:
+            enc += ["-threads", str(th)]
+
+        log("思考", f"逐分镜合成镜头：画面定格 + 配音轨，共 {len(images)} 段"
+                    f"（preset {config.PRESET}" + (f"，{th} 线程" if th else "") + "）")
         for i, (img, meta) in enumerate(zip(images, metas)):
             dur = round(meta["duration"] + gap, 3)
             total += dur
@@ -557,8 +565,7 @@ class EditAgent:
                 "-loop", "1", "-i", img, "-i", meta["path"],
                 "-t", f"{dur:.3f}",
                 "-vf", ",".join(vf), "-af", ",".join(af),
-                "-r", str(config.FPS), "-c:v", config.VIDEO_CODEC,
-                "-tune", "stillimage", "-crf", config.CRF, "-preset", config.PRESET,
+                "-r", str(config.FPS), *enc,
                 "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2",
                 "-movflags", "+faststart", clip, timeout=600)
             clips.append(clip)
@@ -632,9 +639,15 @@ class EditAgent:
                      f"Outline=3,Shadow=0,Alignment=2,"
                      f"MarginV={fspec.get('sub_margin', config.SUBTITLE_MARGIN_V)}")
             vf = f"subtitles=narration.srt:force_style='{style}'"
+        th = config.ffmpeg_threads()
+        # 这一步要把整片重新编码一遍，是整条流水线里最慢的单个调用。
+        # 先打一行日志并说明耗时，否则前端看起来像卡死了（期间不会有任何新事件）。
+        log("思考", f"烧录中文字幕：整片重编码，是本流程最耗时的一步"
+                    f"（preset {config.PRESET}" + (f"，{th} 线程" if th else "") + "，请耐心等待）")
         media.ff("-i", os.path.basename(src), "-vf", vf,
                  "-c:v", config.VIDEO_CODEC, "-crf", config.CRF,
-                 "-preset", config.PRESET, "-c:a", "copy",
+                 "-preset", config.PRESET, *(["-threads", str(th)] if th else []),
+                 "-c:a", "copy",
                  "-movflags", "+faststart", os.path.basename(out),
                  timeout=900, cwd=project_dir)
         log("行动", f"烧录中文字幕（{'ASS' if os.path.exists(ass) else 'SRT'} → 硬字幕）")

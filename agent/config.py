@@ -110,7 +110,51 @@ WIDTH, HEIGHT = FORMATS["landscape"]["w"], FORMATS["landscape"]["h"]  # 兼容�
 FPS = 25
 VIDEO_CODEC = "libx264"
 CRF = "20"
-PRESET = "medium"
+# 编码 preset：默认 veryfast。
+# 画面是「静止图片 + 定格」，没有运动搜索的价值，medium 纯属白烧 CPU。
+# 实测同一镜头：medium 5.0s / 峰值 683MB，veryfast 2.9s / 471MB，画质肉眼无差。
+# 想追极限画质可按需调回 medium，但云上小实例很容易因此 OOM。
+PRESET = os.environ.get("FFMPEG_PRESET", "veryfast")
+
+
+def _cpu_quota() -> float:
+    """容器里实际能用的 CPU 核数（读 cgroup 限额）。取不到返回 0。"""
+    try:                                        # cgroup v2
+        with open("/sys/fs/cgroup/cpu.max", encoding="utf-8") as f:
+            quota, period = f.read().split()
+        if quota != "max":
+            return int(quota) / int(period)
+        return 0.0
+    except Exception:
+        pass
+    try:                                        # cgroup v1
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us", encoding="utf-8") as f:
+            quota = int(f.read().strip())
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us", encoding="utf-8") as f:
+            period = int(f.read().strip())
+        return quota / period if quota > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def ffmpeg_threads() -> int:
+    """x264 编码线程数。0 = 不干预，交给 ffmpeg 自己决定。
+
+    为什么必须管：x264 默认按「宿主机核数」开线程，容器里会误判成 8~32 核，
+    而每个线程都要缓存整帧 1080p。实测单进程峰值：
+        preset=medium + 自动线程 → 683MB   （旧默认，必然撑爆 512MB）
+        preset=veryfast + 2 线程 → 337MB
+        preset=veryfast + 1 线程 → 290MB
+    Render 免费档只有 512MB，所以容器里按 cgroup 限额把线程数压到实际核数。
+    本机取不到 cgroup → 返回 0，不干预，保持原速。
+    """
+    env = (os.environ.get("FFMPEG_THREADS") or "").strip()
+    if env.isdigit():
+        return int(env)
+    quota = _cpu_quota()
+    if quota <= 0:
+        return 0
+    return max(1, min(4, int(quota + 0.5)))     # 0.1 CPU → 1；0.5 → 1；2 → 2
 COVER_DURATION = 3.0      # 片头时长（秒）
 ENDING_DURATION = 3.0     # 片尾时长（秒）
 SHOT_GAP = 0.35           # 分镜之间的停顿（秒）

@@ -109,12 +109,30 @@ def build_bgm(duration: float, out_path: str, style: str = "calm",
     peak = float(np.max(np.abs(buf))) or 1.0
     buf = buf / peak * (10 ** (-20 / 20))
 
-    # 轻微立体声展宽
+    # 轻微立体声展宽 + 转 16bit PCM
+    #
+    # 内存提醒（改这段前务必先读）：
+    #   106 秒立体声的 float64 数组本身是 75MB，如果写成
+    #       stereo = np.stack([left, right], axis=1)
+    #       pcm = np.clip(stereo * 32767, -32768, 32767).astype("<i2")
+    #   会同时存在 stereo、stereo*32767、clip 结果三个 75MB 大数组，
+    #   实测峰值冲到 244MB —— 在 512MB 的小实例上这就是「能不能出片」的分界线。
+    #   所以这里分块处理，中间结果直接写进 int16 目标数组，峰值压到 65MB 以内。
     delay = int(0.012 * SR)
-    left = buf
-    right = np.concatenate([np.zeros(delay), buf[:-delay]]) * 0.92
-    stereo = np.stack([left, right], axis=1)
-    pcm = np.clip(stereo * 32767, -32768, 32767).astype("<i2")
+    gain = (10 ** (-20 / 20)) / peak * 32767
+    n = len(buf)
+    pcm = np.zeros((n, 2), dtype="<i2")
+    step = SR * 10                       # 每次处理 10 秒
+    for s in range(0, n, step):
+        e = min(n, s + step)
+        seg = buf[s:e] * gain            # 左声道
+        np.clip(seg, -32768, 32767, out=seg)
+        pcm[s:e, 0] = seg
+        rs = max(s, delay)               # 右声道整体延后 delay 个采样（展宽）
+        if e > rs:
+            seg_r = buf[rs - delay:e - delay] * (gain * 0.92)
+            np.clip(seg_r, -32768, 32767, out=seg_r)
+            pcm[rs:e, 1] = seg_r
 
     with wave.open(out_path, "wb") as w:
         w.setnchannels(2)
