@@ -218,6 +218,12 @@ def health():
     return {
         "ok": True,
         "version": "WonderKourse 1.0",
+        # 部署标识：云平台构建时会注入 commit 号（Render 是 RENDER_GIT_COMMIT）。
+        # 本机跑显示 local。作用是「外面不用登录就能确认新代码到底部署上去了没」——
+        # 否则整个站点都被口令挡着，无法从外部验证版本。
+        "build": (os.environ.get("RENDER_GIT_COMMIT")
+                  or os.environ.get("GIT_COMMIT")
+                  or os.environ.get("SOURCE_VERSION") or "local")[:7],
         "llm_mode": llm_client.llm_label(),
         "llm_ready": llm_client.llm_available(),
         "ffmpeg": media.ffmpeg_version(),
