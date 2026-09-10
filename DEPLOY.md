@@ -82,10 +82,18 @@ docker run -d --name wonderkourse -p 80:8000 \
 
 `-v` 挂一个卷，容器重建时已生成的成片不会丢。
 
-### 方式 C：Hugging Face Spaces（免费档最强，**推荐**）
+### 方式 C：Hugging Face Spaces（**需要 PRO，$9/月**）
 
-为什么推荐：HF Spaces 免费档给 **2 vCPU / 16 GB 内存**，
-而 Render 免费档只有 0.1 CPU / 512 MB。同一支 3 分钟 1080p 成片：
+> ⚠️ **HF 已改政策，免费账号不能建 Docker Space**。官方文档原文：
+> *"Static Spaces are free for everyone. **Gradio and Docker Spaces run on compute
+> and require a paid plan to create: PRO** for personal accounts"。*
+> 而 Static Space 只能托管静态文件，跑不了本项目的 Python + FFmpeg。
+>
+> 免费账号仅在「最多 2 个 ZeroGPU 版 Gradio Space」这一条上例外，
+> 但那是给 GPU 短时推理用的，不适合本项目的长时间纯 CPU 任务。
+
+开了 PRO 之后，硬件仍可选**免费**的 CPU Basic（2 vCPU / 16GB），
+比 Render 免费档（0.1 CPU / 512MB）强得多。同一支 3 分钟 1080p 成片：
 
 | 平台 | 免费档规格 | 大致耗时 |
 |---|---|---|
@@ -155,7 +163,32 @@ Space 页面 → **Settings** → **Variables and secrets** → New secret：
 绝大多数情况平台只检查端口是否响应，不受影响；万一它要求首页返回 200，
 把 `app.py` 里 `_access_gate` 的放行条件加上 `or request.url.path == "/"` 即可。
 
-### 方式 D：Railway / 其他支持 Dockerfile 的平台
+### 方式 D：用自己电脑当服务器 + 免费内网穿透（零成本、最快）
+
+本机出一支 3 分钟成片只要**约 70 秒**（比 Render 免费档快约 25 倍），
+所以「本机跑 + 穿透一个公网地址」是演示场景里最划算的方案：
+
+```powershell
+# 终端 1：启动服务
+.\.venv\Scripts\python.exe app.py
+
+# 终端 2：内网穿透（二选一，都有免费档）
+cloudflared tunnel --url http://127.0.0.1:8000    # Cloudflare Tunnel
+ngrok http 8000                                   # ngrok
+```
+
+拿到形如 `https://xxxx.trycloudflare.com` 的地址就能分享出去。
+
+| | 说明 |
+|---|---|
+| 优点 | 零成本、速度最快（用你本机的 CPU 与内存） |
+| 缺点 | **电脑必须开着**，休眠 / 关机链接就失效 |
+| 适合 | 课堂演示、答辩、临时给几个人试用 |
+
+注意：这种方式下监听地址是 `127.0.0.1`，所以网页端的「⚙ 大模型设置」**仍然可用**
+（它只在监听 `0.0.0.0` 时被禁用）。
+
+### 方式 E：Railway / 其他支持 Dockerfile 的平台
 
 只要平台支持「用 Dockerfile 构建」就能跑，把端口对上即可
 （平台注入 `PORT` 时会自动覆盖镜像里的默认值）。
@@ -197,9 +230,9 @@ Render 免费实例是 **0.1 CPU / 512 MB**（官方定价页原文：`free: 0.1
 | Render Free | 0.1 CPU / 512MB | **约 30 分钟** |
 | Render Starter | 0.5 CPU / 512MB | 约 6 分钟（内存仍是 512MB，余量很小） |
 | Render Standard | 1 CPU / 2GB | 约 3 分钟 |
-| Hugging Face Spaces | 2 vCPU / 16GB | **约 1~2 分钟（免费档最划算）** |
+| **Hugging Face PRO** | **2 vCPU / 16GB** | **约 1~2 分钟**（$9/月，但 CPU 是 Render Starter 的 4 倍、内存 32 倍） |
 
-**只想免费又要快 → 用 HF Spaces**（把端口改成 `7860` 即可，见上面方式 C）。
+**只想免费又要快 → 用你自己的电脑跑 + 免费内网穿透**（见下方方式 D）。
 
 ### 另外两件事
 
