@@ -1,0 +1,258 @@
+{
+  "project_id": "20260911-113618-生成式AI如何赋能教学设计",
+  "title": "生成式AI赋能教学设计",
+  "subject": "教育技术 · 教学设计",
+  "audience": "本科生",
+  "source": "大模型生成（deepseek-chat）",
+  "keywords": [
+    "AI",
+    "如何赋能",
+    "何赋能教",
+    "赋能教学",
+    "能教学设",
+    "教学设计"
+  ],
+  "minutes": 2.1,
+  "theme": "deepsea",
+  "style": "calm",
+  "fmt": "landscape",
+  "illustrations": true,
+  "format_name": "横版 16:9",
+  "resolution": "1920×1080",
+  "doc_name": "",
+  "documents": [],
+  "engine": [
+    "edge"
+  ],
+  "shots": [
+    {
+      "index": 1,
+      "scene": "封面",
+      "layout": "cover",
+      "title": "生成式AI赋能教学设计",
+      "bullets": [],
+      "narration": "欢迎来到今天的微课。我们要聊一个正在改变课堂的话题：生成式AI如何赋能教学设计。它离你并不遥远，一起来看。",
+      "seconds": 10.704,
+      "visual_kind": "motif"
+    },
+    {
+      "index": 2,
+      "scene": "问题引入",
+      "layout": "quote",
+      "title": "先从一个问题说起",
+      "bullets": [
+        "你有没有想过，为什么有些课堂让人昏昏欲睡，而有些却让人欲罢不能？教学设计就是背后的魔法。现在，生成式AI来了，它能让这个魔法变得更简单、更强大。"
+      ],
+      "narration": "先从一个问题说起。为什么有些课堂让人昏昏欲睡，有些却让人欲罢不能？背后其实是教学设计在起作用。如今生成式AI来了，它能让这份设计变得更简单、更强大。",
+      "seconds": 14.304,
+      "visual_kind": "spotlight"
+    },
+    {
+      "index": 3,
+      "scene": "概念界定",
+      "layout": "quote",
+      "title": "它到底是什么",
+      "bullets": [
+        "生成式AI赋能教学设计，是指利用像ChatGPT这样的AI工具，辅助教师完成教学目标设定、内容生成、活动设计、评价方案等环节，从而提升设计效率和质量。"
+      ],
+      "narration": "那它到底是什么？生成式AI赋能教学设计，就是利用像ChatGPT这样的工具，辅助教师完成目标设定、内容生成、活动设计和评价方案，从而提升效率和质量。",
+      "seconds": 13.656,
+      "visual_kind": "spotlight"
+    },
+    {
+      "index": 4,
+      "scene": "为什么重要",
+      "layout": "points",
+      "title": "为什么值得关注",
+      "bullets": [
+        "效率提升|AI能快速生成大量教学素材和活动方案，节省教师时间。",
+        "个性化|AI可以根据学生特点，帮助设计差异化的学习路径。"
+      ],
+      "narration": "为什么它值得关注？一是效率，AI能快速生成大量教学素材和活动方案，帮教师省下时间；二是个性化，它能根据学生特点，帮助设计差异化的学习路径。",
+      "seconds": 13.752,
+      "visual_kind": "rail"
+    },
+    {
+      "index": 5,
+      "scene": "核心要素",
+      "layout": "board",
+      "title": "拆开来看，它由这几部分组成",
+      "bullets": [
+        "目标设定|AI帮助分析课程标准和学情，生成明确可测的教学目标。",
+        "内容生成|AI快速产出案例、习题、阅读材料等，丰富教学内容。"
+      ],
+      "narration": "把它拆开来看，主要由这几部分组成。",
+      "seconds": 3.504,
+      "visual_kind": "concept"
+    },
+    {
+      "index": 6,
+      "scene": "运作机制",
+      "layout": "board",
+      "title": "它是怎么运转起来的",
+      "bullets": [
+        "需求分析|教师输入课程主题和学生特点，AI分析并建议教学方向。",
+        "方案生成|AI基于分析结果，生成教学目标、内容、活动和评价的初稿。"
+      ],
+      "narration": "那它是怎么运转起来的？先做需求分析，教师输入课程主题和学生特点，AI分析并建议教学方向；再进行方案生成，AI基于结果，产出目标、内容、活动和评价的初稿。",
+      "seconds": 15.144,
+      "visual_kind": "flow"
+    },
+    {
+      "index": 7,
+      "scene": "要点回顾",
+      "layout": "summary",
+      "title": "这节课我们讲了什么",
+      "bullets": [
+        "生成式AI能辅助教学设计，提升效率和质量。",
+        "核心环节包括目标、内容、活动和评价的设计。",
+        "AI是教师的助手，不能替代教师的专业判断。"
+      ],
+      "narration": "回顾一下这节课。生成式AI能辅助教学设计，提升效率和质量，核心环节包括目标、内容、活动和评价的设计。但要记住，AI是教师的助手，不能替代专业判断。",
+      "seconds": 15.552,
+      "visual_kind": "mind"
+    },
+    {
+      "index": 8,
+      "scene": "片尾",
+      "layout": "ending",
+      "title": "谢谢观看",
+      "bullets": [
+        "生成式AI能辅助教学设计，提升效率和质量。",
+        "核心环节包括目标、内容、活动和评价的设计。",
+        "AI是教师的助手，不能替代教师的专业判断。"
+      ],
+      "narration": "生成式AI能辅助教学设计，提升效率和质量，核心环节包括目标、内容、活动和评价。请记住，AI是教师的助手，不能替代你的专业判断。谢谢观看。",
+      "seconds": 14.568,
+      "visual_kind": "motif"
+    }
+  ],
+  "images": [
+    "shot_01.png",
+    "shot_02.png",
+    "shot_03.png",
+    "shot_04.png",
+    "shot_05.png",
+    "shot_06.png",
+    "shot_07.png",
+    "shot_08.png"
+  ],
+  "duration": 103.98,
+  "size_mb": 4.02,
+  "review": {
+    "pass": true,
+    "score": 100,
+    "issues": [],
+    "checks": [
+      {
+        "code": "image_count",
+        "name": "画面数量与分镜一致",
+        "ok": true,
+        "detail": "8 张画面 / 8 个分镜"
+      },
+      {
+        "code": "image_missing",
+        "name": "画面文件完整",
+        "ok": true,
+        "detail": "全部正常"
+      },
+      {
+        "code": "narration_empty",
+        "name": "旁白稿非空",
+        "ok": true,
+        "detail": "全部有旁白"
+      },
+      {
+        "code": "audio_short",
+        "name": "配音时长合理",
+        "ok": true,
+        "detail": "最短 3.5s"
+      },
+      {
+        "code": "video_missing",
+        "name": "成片文件有效",
+        "ok": true,
+        "detail": "4.0 MB"
+      },
+      {
+        "code": "duration_mismatch",
+        "name": "音画时间轴同步",
+        "ok": true,
+        "detail": "预期 104.0s / 实际 104.0s（偏差 0.00s）"
+      },
+      {
+        "code": "subtitle_missing",
+        "name": "字幕覆盖全部分镜",
+        "ok": true,
+        "detail": "17 条字幕 / 8 个分镜"
+      },
+      {
+        "code": "content_thin",
+        "name": "旁白内容充实",
+        "ok": true,
+        "detail": "内容充实"
+      }
+    ],
+    "round": 1
+  },
+  "review_rounds": [
+    {
+      "pass": true,
+      "score": 100,
+      "issues": [],
+      "checks": [
+        {
+          "code": "image_count",
+          "name": "画面数量与分镜一致",
+          "ok": true,
+          "detail": "8 张画面 / 8 个分镜"
+        },
+        {
+          "code": "image_missing",
+          "name": "画面文件完整",
+          "ok": true,
+          "detail": "全部正常"
+        },
+        {
+          "code": "narration_empty",
+          "name": "旁白稿非空",
+          "ok": true,
+          "detail": "全部有旁白"
+        },
+        {
+          "code": "audio_short",
+          "name": "配音时长合理",
+          "ok": true,
+          "detail": "最短 3.5s"
+        },
+        {
+          "code": "video_missing",
+          "name": "成片文件有效",
+          "ok": true,
+          "detail": "4.0 MB"
+        },
+        {
+          "code": "duration_mismatch",
+          "name": "音画时间轴同步",
+          "ok": true,
+          "detail": "预期 104.0s / 实际 104.0s（偏差 0.00s）"
+        },
+        {
+          "code": "subtitle_missing",
+          "name": "字幕覆盖全部分镜",
+          "ok": true,
+          "detail": "17 条字幕 / 8 个分镜"
+        },
+        {
+          "code": "content_thin",
+          "name": "旁白内容充实",
+          "ok": true,
+          "detail": "内容充实"
+        }
+      ],
+      "round": 1
+    }
+  ],
+  "elapsed": 72.8,
+  "has_nosub": true
+}
