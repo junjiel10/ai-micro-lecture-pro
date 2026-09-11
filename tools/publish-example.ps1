@@ -147,12 +147,28 @@ $totalMb = (Get-ChildItem $dst -Recurse -File |
 Write-Host ("  [1/3] 已整理：{0} 个文件 + {1} 张帧图，共 {2:N1} MB" -f `
             $nFile, $nFrame, $totalMb) -ForegroundColor Green
 
+# 同一支片重新生成会拿到新的项目号，旧的示例目录会留在 examples/ 里 ——
+# 那样云端首页会出现两张同名卡片。这里按标题把同名旧目录清掉。
+$titleNow = if ($meta -and $meta.title) { $meta.title } else { $null }
+if ($titleNow) {
+    Get-ChildItem -Path $examplesDir -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne $pick.Name } |
+        ForEach-Object {
+            $other = Read-Meta $_.FullName
+            if ($other -and $other.title -eq $titleNow) {
+                Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Host "  已移除同名的旧示例：$($_.Name)" -ForegroundColor DarkYellow
+            }
+        }
+}
+
 # ---------------------------------------------------------------- 提交
 Set-Location $root
-$rel = "examples/$($pick.Name)"
-& git add -- $rel 2>&1 | Out-Null
+# 整个 examples/ 一起暂存：这样新增示例和「移除同名旧示例」的删除
+# 会在同一次提交里，不会出现新旧两张同名卡片并存的情况。
+& git add -A -- examples 2>&1 | Out-Null
 
-$staged = & git status --porcelain -- $rel 2>&1
+$staged = & git status --porcelain -- examples 2>&1
 if (-not $staged) {
     Write-Host '  [2/3] 与仓库里已有的一模一样，没有需要提交的改动。' -ForegroundColor DarkGray
 } else {
