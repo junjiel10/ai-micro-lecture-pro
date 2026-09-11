@@ -7,12 +7,10 @@ venv/
 
 # 每次生成的产物（体积大，且含你的主题内容）
 output/
-# 例外：首页「示例作品」里那支 PPT 示例（20260911-lingnan-agriculture）
-# 是随仓库走的，约 20MB。这样云端部署也能看到示例，不会是一片空白
-# ——Render 免费档的磁盘是临时的，重启就清空，光靠本机生成的产物传不上去。
-# 它是用 git add -f 强制加入的；.gitignore 对已跟踪文件不起作用，
-# 所以以后更新这批文件，普通的 git add 就会带上。
-# 不想让它占仓库体积的话：git rm -r --cached output/20260911-lingnan-agriculture
+# 注意：首页「示例作品」里那支 PPT 示例（岭南农耕文化）不在 output/ 下，
+# 而是放在 examples/ 里随仓库走 —— 因为 .dockerignore 排除了 output/，
+# 且 Dockerfile 里 VOLUME /app/output 是个挂载点，放在 output/ 里的东西
+# 既进不了镜像也留不住。启动时再复制进 output/，见 app.py 的 _seed_examples。
 
 # Python 缓存
 __pycache__/

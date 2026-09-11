@@ -37,7 +37,40 @@ BASE_DIR = config.BASE_DIR
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 OUTPUT_DIR = config.OUTPUT_DIR
 UPLOAD_DIR = os.path.join(OUTPUT_DIR, "_uploads")
+EXAMPLES_DIR = os.path.join(BASE_DIR, "examples")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def _seed_examples() -> None:
+    """把随仓库发布的示例作品「种」进 output/。
+
+    为什么不干脆把示例直接提交在 output/ 下：
+      1) .dockerignore 排除了 output/，构建镜像时根本进不去；
+      2) Dockerfile 里有 VOLUME ["/app/output"]，那是个挂载点，
+         即使打进了镜像也会被挂载盖住。
+    所以示例放在 examples/ 下随镜像走，等容器起来、挂载点就绪之后再复制过去。
+
+    已有同名的且出过成片就不覆盖 —— 页面上改过、重做过的内容要留住。
+    """
+    if not os.path.isdir(EXAMPLES_DIR):
+        return
+    for name in sorted(os.listdir(EXAMPLES_DIR)):
+        src = os.path.join(EXAMPLES_DIR, name)
+        # 只认「日期-名字」形式的项目目录，
+        # 这样 examples/ 里那些输入样例文档（README.txt、*.txt）会被自然跳过
+        if not os.path.isdir(src) or not name[:1].isdigit():
+            continue
+        dst = os.path.join(OUTPUT_DIR, name)
+        if os.path.exists(os.path.join(dst, "final.mp4")):
+            continue
+        try:
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        except OSError:
+            # 复制失败不该拦住服务启动，最多就是示例看不到
+            pass
+
+
+_seed_examples()
 
 app = FastAPI(title="妙课生花 WonderKourse")
 
