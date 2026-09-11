@@ -50,8 +50,6 @@
   }
 
   var LOGIN_NOTICE = "演示版免登录，直接体验；正式版将支持账号体系与个人作品库。";
-  var LOGOUT_HINT = "已通过访问口令进入。点击退出后，下次创作时需要重新输入口令。";
-  var PASS_HINT = "输入访问口令后即可开始创作";
 
   window.toast = toast;   // 供调试与后续复用
 
@@ -112,41 +110,10 @@
   }
 
   function initNav() {
-    /* 「登录 / 注册」按部署环境自动变身，三种状态：
-         demo   —— 本机自用没设口令，保持占位按钮，点一下说明「免登录」
-         pass   —— 要口令且还没通过，点一下弹口令框
-         logout —— 已通过口令，点一下退出
-       不区分的话会很难受：页面上写着「登录 / 注册」，点一下却告诉你「免登录」，
-       可你刚刚才输过口令。 */
+    /* 「登录 / 注册」是视觉占位：不跳转、不登录，点一下只说明现状。
+       云端在「开始制作」时会另外弹口令框，跟这个按钮没关系。 */
     var login = $("loginBtn");
-    if (login) {
-      var setLoginBtn = function (mode) {
-        login.dataset.mode = mode;
-        if (mode === "logout") {
-          login.textContent = "退出登录";
-          login.title = LOGOUT_HINT;
-          login.setAttribute("aria-label", "退出登录");
-        } else if (mode === "pass") {
-          login.textContent = "输入口令";
-          login.title = PASS_HINT;
-          login.setAttribute("aria-label", "输入访问口令");
-        }
-      };
-
-      login.addEventListener("click", function () {
-        var mode = login.dataset.mode || "demo";
-        if (mode === "logout") { window.location.href = "/logout"; return; }
-        if (mode === "pass") {
-          openPassModal().then(function (ok) { if (ok) setLoginBtn("logout"); });
-          return;
-        }
-        toast(LOGIN_NOTICE);
-      });
-
-      fetchAuth().then(function (a) {
-        if (a.required) setLoginBtn(a.authed ? "logout" : "pass");
-      });
-    }
+    if (login) login.addEventListener("click", function () { toast(LOGIN_NOTICE); });
 
     initCollapse(document.querySelector(".nav"), $("navLinks"), $("navToggle"));       // 首页 / 指南页
     initCollapse(document.querySelector(".topbar"), $("topActions"), $("topToggle"));  // 创作台
