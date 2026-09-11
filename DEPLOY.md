@@ -290,7 +290,63 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\tunnel.ps1 -Port 8010
 
 ---
 
-## 4. 免费档够不够用：实测数据
+## 4. 把自己做的片子挂到云端展示
+
+> ### ⚠️ 先记住这条：云端生成的片子会丢
+>
+> Render 免费档的文件系统是**临时的**。官方文档原文：
+> *"By default, Render services have an ephemeral filesystem. This means that
+> without a persistent disk, any changes you make to a service's local files
+> are lost every time the service redeploys or restarts."*
+>
+> 实测就是这样：在云端点「开始制作」跑完一支片（云端出一支 1 分 40 秒的片要
+> **约 16 分钟**，本机只要 40 秒），页面刷新后它就没了 ——
+> 容器重启（闲置休眠、或代码重新部署）会把 `output/` 里
+> 除「随镜像走的文件」之外的内容全部清空。
+>
+> 所以：**出片在本机做，想挂到云端展示就走下面的发布流程。**
+
+### 怎么发布
+
+双击 `publish-example.bat`，它会：
+
+1. 列出本机 `output/` 里已出成片的项目（按时间倒序，刚做好的排最前）
+2. 你选一支
+3. 把**展示必需**的文件复制进 `examples/<项目号>/`：
+   成片、元数据、字幕、分镜帧图 —— 中间产物（`clips` / `shots` / `bgm.wav` /
+   `raw.mp4`）一个都不带，否则仓库白白大几十 MB
+4. 自动提交并推送到 GitHub（网络时通时断会自动重试；检测到本地 7890 代理会走代理）
+
+约 2~5 分钟后 Render 部署完成，这支片就**永久**挂在云端了 ——
+之后容器重启也不会丢，因为它已经随镜像走了。
+
+也支持非交互调用：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\publish-example.ps1 -Id 20260911-113618
+# -Id 只要写项目号的前段就行（项目号里往往带中文，命令行传中文容易出代码页问题）
+```
+
+### 为什么这样就丢不了
+
+`examples/` 会随镜像打进容器；服务每次启动时 `app.py` 的 `_seed_examples()`
+会把里面的项目复制进 `output/`，这时挂载点已经就绪，写进去才留得住。
+
+注意**不能**把文件直接提交到 `output/`：
+
+- `.dockerignore` 里有 `output/`，构建镜像时 `COPY . .` 不会带上它；
+- `Dockerfile` 里有 `VOLUME ["/app/output"]`，那是个挂载点，镜像里的内容会被盖住。
+
+### 想直接在云端出片并留住？
+
+得给 Render 挂**持久磁盘**，挂载路径填 `/app/output`
+（`Dockerfile` 里那句 `VOLUME ["/app/output"]` 就是为这个预留的）。
+但官方限制：**持久磁盘只在付费实例上可用，免费档挂不了**。
+挂了之后重启不再丢数据，代价是部署时会有几秒不可用（磁盘服务不支持零停机部署）。
+
+---
+
+## 5. 免费档够不够用：实测数据
 
 Render 免费实例是 **0.1 CPU / 512 MB**（官方定价页原文：`free: 0.1 CPU / 512 MB RAM`）。
 本项目在「约 3 分钟 / 横版 1080p」下的实测开销：
@@ -338,7 +394,7 @@ Render 免费实例是 **0.1 CPU / 512 MB**（官方定价页原文：`free: 0.1
 
 ---
 
-## 5. 出问题先查这几条
+## 6. 出问题先查这几条
 
 **画面 / 字幕里的中文变成方块（□□□）**
 镜像没装中文字体。确认 `Dockerfile` 里的 `fonts-noto-cjk` 装上了，
@@ -358,7 +414,7 @@ Render 免费实例是 **0.1 CPU / 512 MB**（官方定价页原文：`free: 0.1
 
 ---
 
-## 6. 想改回本机运行
+## 7. 想改回本机运行
 
 云上的环境变量不会影响本机。本机直接：
 
