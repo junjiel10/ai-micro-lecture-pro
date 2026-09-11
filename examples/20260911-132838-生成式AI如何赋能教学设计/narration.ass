@@ -1,0 +1,34 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,44,&H00FFFFFF,&H000000FF,&H0020120A,&H80000000,0,0,0,0,100,100,0,0,1,3,0,2,48,48,70,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:06.90,Default,,0,0,0,,各位老师好，欢迎来到今天的微课。\N我们要聊的话题是生成式AI如何赋能教学设计。
+Dialogue: 0,0:00:06.90,0:00:11.44,Default,,0,0,0,,它到底是帮手还是麻烦，\N又该怎么用，接下来一起看看。
+Dialogue: 0,0:00:11.79,0:00:18.96,Default,,0,0,0,,先从一个问题说起。备课、写教案、出题、\N做课件，这些事能不能让AI帮忙？
+Dialogue: 0,0:00:18.96,0:00:25.31,Default,,0,0,0,,最近很多老师都在讨论，\N有人觉得它是超级助手，也有人担心不靠谱。
+Dialogue: 0,0:00:25.31,0:00:28.79,Default,,0,0,0,,今天我们就聊聊它怎么赋能教学设计。
+Dialogue: 0,0:00:29.14,0:00:34.68,Default,,0,0,0,,简单说，生成式AI赋能教学设计，\N就是教师借助ChatGPT、
+Dialogue: 0,0:00:34.68,0:00:40.78,Default,,0,0,0,,文心一言这类大语言模型，\N辅助完成教学目标分析、活动设计和资源生成。
+Dialogue: 0,0:00:40.78,0:00:47.06,Default,,0,0,0,,它不是替你上课，而是把重复劳动接过去，\N让你把精力留给真正的教学判断。
+Dialogue: 0,0:00:47.41,0:00:54.05,Default,,0,0,0,,为什么值得关注？第一，提升效率，\N它能快速生成教案框架、题目和素材，
+Dialogue: 0,0:00:54.05,0:01:00.68,Default,,0,0,0,,帮你省下大量时间。第二，激发创意，\N它能提供多种教学思路和活动方案，
+Dialogue: 0,0:01:00.68,0:01:02.49,Default,,0,0,0,,帮你打破思维定式。
+Dialogue: 0,0:01:02.84,0:01:07.88,Default,,0,0,0,,拆开来看，它由几个核心部分组成。\N一是精准提示词，
+Dialogue: 0,0:01:07.88,0:01:14.62,Default,,0,0,0,,用清晰具体的指令让AI理解你的需求。\N二是人机协作，教师主导决策，
+Dialogue: 0,0:01:14.62,0:01:19.04,Default,,0,0,0,,AI提供选项和草稿，\N两者配合才能出好结果。
+Dialogue: 0,0:01:19.39,0:01:27.17,Default,,0,0,0,,那它是怎么运转起来的？第一步，需求分析，\N教师明确教学目标、学生特点和资源限制。
+Dialogue: 0,0:01:27.17,0:01:34.96,Default,,0,0,0,,第二步，提示设计，编写包含角色、任务、\N格式等要素的提示词，让AI给出可用方案。
+Dialogue: 0,0:01:35.31,0:01:43.54,Default,,0,0,0,,回顾一下这节课。生成式AI能辅助教学设计全流程，\N精准提示词是人机协作的关键，
+Dialogue: 0,0:01:43.54,0:01:51.56,Default,,0,0,0,,更重要的是教师主导、AI辅助，\N这个关系不能本末倒置。用好它，教学会更轻松。
+Dialogue: 0,0:01:51.91,0:02:00.50,Default,,0,0,0,,感谢观看。记住，生成式AI能辅助教学设计全流程，\N精准提示词是人机协作的关键，
+Dialogue: 0,0:02:00.50,0:02:06.84,Default,,0,0,0,,教师主导、AI辅助，不可本末倒置。\N希望它成为你的好帮手。
