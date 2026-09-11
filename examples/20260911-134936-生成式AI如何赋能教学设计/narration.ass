@@ -1,0 +1,30 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,44,&H00FFFFFF,&H000000FF,&H0020120A,&H80000000,0,0,0,0,100,100,0,0,1,3,0,2,48,48,70,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:07.11,Default,,0,0,0,,各位老师好，欢迎走进今天的微课。\N我们一起聊聊生成式AI如何赋能教学设计，
+Dialogue: 0,0:00:07.11,0:00:09.88,Default,,0,0,0,,看看它怎样成为你的得力助手。
+Dialogue: 0,0:00:10.23,0:00:17.88,Default,,0,0,0,,你是否为设计一堂好课翻遍资料、熬夜构思，\N却仍觉得活动不够新颖、评价不够精准？
+Dialogue: 0,0:00:17.88,0:00:22.31,Default,,0,0,0,,生成式AI来了，\N它真能帮我们解决这些难题吗？
+Dialogue: 0,0:00:22.66,0:00:28.22,Default,,0,0,0,,生成式AI赋能教学设计，\N就是教师借助大型语言模型等工具，
+Dialogue: 0,0:00:28.22,0:00:34.97,Default,,0,0,0,,通过对话生成和优化教学方案、\N学习活动与评价工具，把AI当作认知伙伴，
+Dialogue: 0,0:00:34.97,0:00:37.15,Default,,0,0,0,,而教师始终是决策主体。
+Dialogue: 0,0:00:37.50,0:00:45.41,Default,,0,0,0,,它为什么值得关注？一是提升效率，\N快速生成教案框架和活动创意，省下搜集构思的时间；
+Dialogue: 0,0:00:45.41,0:00:51.54,Default,,0,0,0,,二是激发创新，提供跨学科、\N多模态的设计思路，帮你打破思维定式。
+Dialogue: 0,0:00:51.89,0:00:59.77,Default,,0,0,0,,拆开来看，它由两大部分组成。一是提示词设计，\N清晰描述教学目标、学情和约束，
+Dialogue: 0,0:00:59.77,0:01:07.85,Default,,0,0,0,,引导AI产出可用内容；二是迭代优化，\N把初稿当起点，通过多轮对话逐步细化修正。
+Dialogue: 0,0:01:08.20,0:01:14.63,Default,,0,0,0,,它是怎么运转的？先做需求分析，\N明确教学目标、学习者特征和重难点，
+Dialogue: 0,0:01:14.63,0:01:22.67,Default,,0,0,0,,形成给AI的指令；再输入提示词，\N让AI生成教学设计草案或活动方案，供你继续打磨。
+Dialogue: 0,0:01:23.02,0:01:29.38,Default,,0,0,0,,回顾一下，生成式AI是教学设计的认知伙伴，\N能提升效率与创新。
+Dialogue: 0,0:01:29.73,0:01:37.42,Default,,0,0,0,,生成式AI是教学设计的认知伙伴，\N核心在提示词设计、迭代优化和教师判断。
+Dialogue: 0,0:01:37.42,0:01:42.48,Default,,0,0,0,,愿它帮你省时增效，\N让每堂课更有创意。谢谢观看！
